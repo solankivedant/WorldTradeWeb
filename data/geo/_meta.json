@@ -1,0 +1,11 @@
+{
+  "source": "Natural Earth 1:10m Admin 0 Countries — India point-of-view edition",
+  "file": "ne_10m_admin_0_countries_ind",
+  "url": "https://www.naturalearthdata.com/downloads/10m-cultural-vectors/",
+  "mirror": "https://github.com/nvkelso/natural-earth-vector",
+  "simplification": "mapshaper, topology-preserving, 1.2% of vertices retained",
+  "boundary_note": "Jammu & Kashmir is shown in full as Indian territory, including Gilgit-Baltistan and Aksai Chin. Those areas are claimed by India and administered in practice by Pakistan and China respectively. Natural Earth publishes point-of-view editions precisely because no single rendering of these borders is universally accepted.",
+  "iso_table": "https://raw.githubusercontent.com/lukes/ISO-3166-Countries-with-Regional-Codes/master/all/all.json",
+  "retrieved_at": "2026-08-22T09:04:27.794Z",
+  "license": "public domain (Natural Earth)"
+}

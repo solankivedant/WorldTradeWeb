@@ -1,0 +1,19 @@
+{
+  "name": "tradecenter",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.12.4",
+  "scripts": {
+    "dev": "pnpm --filter @tradecenter/web dev",
+    "build": "pnpm --filter @tradecenter/web build",
+    "start": "pnpm --filter @tradecenter/web start",
+    "typecheck": "pnpm --filter @tradecenter/web typecheck",
+    "lint": "pnpm --filter @tradecenter/web lint",
+    "data:reference": "python data/etl/connectors/worldbank.py",
+    "data:fetch": "python data/etl/connectors/wits.py --vintage $npm_config_vintage",
+    "data:build": "python -m data.etl.pipelines.build --vintage $npm_config_vintage",
+    "data:geo": "node data/etl/pipelines/geo.mjs",
+    "data:all": "pnpm data:reference && pnpm data:fetch && pnpm data:build && pnpm data:geo:prepare && pnpm data:geo",
+    "data:geo:prepare": "bash data/etl/pipelines/prepare-geo.sh"
+  }
+}

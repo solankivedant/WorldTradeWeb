@@ -1,0 +1,57 @@
+# dependencies
+node_modules/
+.pnpm-store/
+.venv/
+__pycache__/
+*.py[cod]
+
+# builds
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# data — large, regenerable, and sometimes licensed
+data/raw/**
+!data/raw/.gitkeep
+data/processed/**
+!data/processed/.gitkeep
+data/geo/*.pmtiles
+data/geo/*.mbtiles
+*.parquet
+*.duckdb
+*.duckdb.wal
+
+# but keep provenance sidecars
+!data/raw/**/_meta.json
+
+# tooling
+.turbo/
+coverage/
+.pytest_cache/
+.ruff_cache/
+playwright-report/
+test-results/
+
+# editors / os
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# claude
+.claude/settings.local.json
+
+# Natural Earth source shapefiles — refetched by data:geo:prepare
+data/geo/ne_pov/*.shp
+data/geo/ne_pov/*.dbf
+data/geo/ne_pov/*.shx
+data/geo/ne_pov/*.prj
