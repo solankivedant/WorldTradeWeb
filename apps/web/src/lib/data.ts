@@ -31,14 +31,67 @@ interface Meta {
   stats: Record<string, unknown>;
 }
 
-const DATA_DIR = path.resolve(process.cwd(), "../../data/processed");
+/**
+ * Where the published dataset lives, resolved rather than assumed.
+ *
+ * `process.cwd()` is not the same place in every environment this runs in: it is the app
+ * directory under `pnpm dev` and in a Vercel build, but a serverless bundle can be rooted
+ * elsewhere depending on how the host lays the files out. A single hard-coded
+ * `../../data/processed` therefore worked locally and resolved to nothing in production -
+ * and because the reader below swallowed the ENOENT, the deploy came up green with every
+ * figure on the site missing.
+ *
+ * So: try the plausible roots, take the first that actually contains the dataset, and say
+ * so loudly when none of them do. `next.config.mjs` is what guarantees the files are
+ * bundled into the function in the first place (`outputFileTracingIncludes`) - this
+ * function only finds them once they are there.
+ */
+const DATA_CANDIDATES = [
+  // monorepo dev, and Vercel builds rooted at apps/web
+  path.resolve(process.cwd(), "../../data/processed"),
+  // a bundle rooted at the repo root
+  path.resolve(process.cwd(), "data/processed"),
+  // a bundle that kept the workspace nesting but is rooted one level higher
+  path.resolve(process.cwd(), "../data/processed"),
+];
+
+function resolveDataDir(): string | null {
+  for (const dir of DATA_CANDIDATES) {
+    // meta.json is the marker: it is written last by the publish stage, so its presence
+    // means a complete build rather than a half-populated directory.
+    if (fs.existsSync(path.join(dir, "meta.json"))) return dir;
+  }
+  return null;
+}
+
+const DATA_DIR = resolveDataDir();
+
+if (!DATA_DIR) {
+  // Not a throw: an unbuilt checkout is a legitimate local state, and the UI has an empty
+  // state that tells you which pipelines to run. But it must never be SILENT again.
+  console.error(
+    [
+      "[data] published dataset not found. Looked in:",
+      ...DATA_CANDIDATES.map((dir) => `  ${dir}`),
+      `  cwd=${process.cwd()}`,
+      "Run the ETL, and check data/processed/*.json is committed - it is what ships to production.",
+    ].join("\n"),
+  );
+}
 
 function read<T>(file: string, fallback: T): T {
+  if (!DATA_DIR) return fallback;
   try {
     return JSON.parse(fs.readFileSync(path.join(DATA_DIR, file), "utf-8")) as T;
-  } catch {
+  } catch (error) {
+    console.error(`[data] failed to read ${file} from ${DATA_DIR}:`, error);
     return fallback;
   }
+}
+
+/** The resolved dataset directory, for the one caller that reads a file directly. */
+export function dataDir(): string | null {
+  return DATA_DIR;
 }
 
 interface Dataset {

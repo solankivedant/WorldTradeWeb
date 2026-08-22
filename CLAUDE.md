@@ -58,9 +58,17 @@ figures from World Bank WITS.
 | `/opportunities` | Rule-based scoring with a full per-card score breakdown |
 | `/about/data` | Sources, units, pipeline stages, build stats, reconciliation warnings |
 
-Real coverage: **190 reporting countries · 48,022 bilateral flows · 16 HS sector groups ·
-2010–2022 · ~10,700 tariff pairs.** Country totals match published reality (China $3,594B,
-USA $2,062B, India $453B for 2022).
+Real coverage: **190 reporting countries · 47,241 bilateral flows · 16 HS sector groups ·
+2010-2023 · ~20,600 tariff pairs.** Country totals match published reality (China $3,380B,
+USA $2,019B, Germany $1,726B, India $431B for 2023).
+
+2023 is the newest year WITS publishes. The frontier moves one year at a time and sits
+2-3 years behind the wall clock, because WITS republishes national customs data that
+reaches UN Comtrade with a lag - verified against live range queries, 2024 onward returns
+nothing for any reporter. To pick up a new year, change `YEAR_TO`/`LATEST` in the WITS
+connector and fetch into a NEW raw vintage directory: filenames do not encode the year, and
+the fetcher skips files already on disk, so re-running into an existing vintage silently
+changes nothing.
 
 Light and dark themes are both first-class: a single toggle in the header (no "follow the
 OS" option, so `data-theme` is always stamped), persisted to localStorage and applied by a

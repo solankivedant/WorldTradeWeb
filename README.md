@@ -4,9 +4,10 @@ An interactive world map for global trade — import/export flows, tariffs, mone
 between countries, product-level detail, and a rule-based engine that surfaces business
 opportunities from the gaps.
 
-**Running on real data.** 190 reporting countries, 48,022 bilateral flows, 16 HS sector
-groups, 2010–2022, ~10,700 tariff pairs — all from World Bank WITS and World Bank Open
-Data, no API key required.
+**Running on real data.** 190 reporting countries, 47,241 bilateral flows, 16 HS sector
+groups, 2010-2023, ~20,600 tariff pairs - all from World Bank WITS and World Bank Open
+Data, no API key required. 2023 is the newest year WITS publishes; the source runs 2-3
+years behind, so 2024+ figures do not exist yet anywhere.
 
 ## Quick start
 
@@ -66,8 +67,8 @@ pipelines/   →  data/processed/ normalize → conform → validate → publish
 
 `pnpm data:build` refuses to publish when validation fails. It checks value ranges,
 reconciles sector sums against reported country totals, and anchors major economies against
-independently published figures. The 2022 build matches reality: China $3,594B, USA
-$2,062B, Germany $1,696B, India $453B.
+independently published figures. The 2023 build matches reality: China $3,380B, USA
+$2,019B, Germany $1,726B, India $431B.
 
 ## Exports and imports are always shown together
 

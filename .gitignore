@@ -18,11 +18,22 @@ build/
 .env.*.local
 !.env.example
 
-# data — large, regenerable, and sometimes licensed
+# data - raw dumps are large, regenerable, and sometimes licensed
 data/raw/**
 !data/raw/.gitkeep
-data/processed/**
-!data/processed/.gitkeep
+
+# ...but the PUBLISHED dataset ships with the app and must be committed.
+#
+# It is the entire data layer: `lib/data.ts` reads these files at both build time and
+# request time, and there is no database behind them. Ignoring them meant a clean clone -
+# which is exactly what a Vercel build does - produced a site where every figure was
+# missing, and silently so: the reader in `lib/data.ts` catches ENOENT and falls back to
+# empty, so the build still reported success and shipped an empty product.
+#
+# It is safe to commit: 3.7 MB total, and WITS/World Bank publish under CC-BY-4.0, which
+# permits redistribution with attribution - carried on /about/data and in every response's
+# `meta` block. The raw dumps above stay ignored; those are ~1500 files and genuinely large.
+!data/processed/*.json
 data/geo/*.pmtiles
 data/geo/*.mbtiles
 *.parquet

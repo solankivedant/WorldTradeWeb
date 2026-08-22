@@ -2,18 +2,27 @@ import { Suspense } from "react";
 import fs from "node:fs";
 import path from "node:path";
 import { MapExplorer } from "@/components/map/map-explorer";
-import { allCountries, dataset, latestYear, provenance } from "@/lib/data";
+import { allCountries, dataDir, dataset, latestYear, provenance } from "@/lib/data";
 import { Empty } from "@/components/ui";
 
 export const metadata = {
   title: "World trade map - TradeCenter",
 };
 
+/**
+ * Geometry is read straight off disk rather than through the indexed dataset: it is a
+ * single large blob with no lookups performed on it, so putting it in the in-memory index
+ * would cost the memory without buying anything. It shares `lib/data.ts`'s resolved
+ * directory so there is exactly one place that knows where published files live.
+ */
 function loadGeometry(): GeoJSON.FeatureCollection | null {
+  const dir = dataDir();
+  if (!dir) return null;
   try {
-    const file = path.resolve(process.cwd(), "../../data/processed/countries.geo.json");
+    const file = path.join(dir, "countries.geo.json");
     return JSON.parse(fs.readFileSync(file, "utf-8")) as GeoJSON.FeatureCollection;
-  } catch {
+  } catch (error) {
+    console.error("[data] failed to read countries.geo.json:", error);
     return null;
   }
 }

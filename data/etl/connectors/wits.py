@@ -55,10 +55,25 @@ ISO3_TO_WITS = {
 }
 RAW_ROOT = Path(__file__).resolve().parents[2] / "raw" / "wits"
 
-# Years with reasonably complete WITS coverage. WITS lags ~2-3 years.
+# Years with reasonably complete WITS coverage.
+#
+# WITS republishes national customs data that reaches UN Comtrade with a long lag, so the
+# frontier sits roughly 2-3 years behind the wall clock and moves one year at a time. As
+# of the 2026-08 snapshot the newest published year is 2023, verified against live range
+# queries (`year/2020;2026`) for usa, chn, ind, deu, vnm, bra and ken - every one of them
+# stops at 2023, and 2024 onward returns nothing for anybody. There is no source of 2024+
+# figures to switch to; the data does not exist yet.
+#
+# Bumping these is the ONLY change needed to pick up a new year: `latest_year` in the
+# build is a max() over what was actually fetched, and the map's year scrubber derives
+# its range from totals.json, so nothing downstream is pinned.
+#
+# A new year needs a NEW raw vintage directory. The fetcher skips any file already on
+# disk (which is what makes it resumable), and the filenames do not encode the year - so
+# re-running into an existing vintage would skip every file and silently change nothing.
 YEAR_FROM = 2010
-YEAR_TO = 2022
-LATEST = 2022
+YEAR_TO = 2023
+LATEST = 2023
 
 TIMEOUT = 60
 MAX_RETRIES = 3
