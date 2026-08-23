@@ -15,8 +15,8 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  choice: "dark",
-  resolved: "dark",
+  choice: "light",
+  resolved: "light",
   setChoice: () => {},
 });
 
@@ -33,23 +33,31 @@ export const useTheme = () => useContext(ThemeContext);
  * is exactly what the `prefers-color-scheme` block in globals.css handles.
  */
 export function ThemeScript() {
-  // Only two states now, so the attribute is ALWAYS stamped. With no "system" option the
-  // OS preference is not consulted at all, and dark is the product default.
-  const script = `(function(){try{var c=localStorage.getItem(${JSON.stringify(STORAGE_KEY)});document.documentElement.setAttribute("data-theme",c==="light"?"light":"dark")}catch(e){document.documentElement.setAttribute("data-theme","dark")}})();`;
+  // Only two states, so the attribute is ALWAYS stamped. With no "system" option the OS
+  // preference is not consulted at all, and light is the product default: a first-time
+  // visitor opening a shared link gets light, and only an explicit toggle stores "dark".
+  //
+  // The comparison tests for "dark" rather than defaulting to it, so any other stored
+  // value - absent, corrupted, or a leftover "system" from the three-state version -
+  // falls through to light rather than to the wrong theme.
+  const script = `(function(){try{var c=localStorage.getItem(${JSON.stringify(STORAGE_KEY)});document.documentElement.setAttribute("data-theme",c==="dark"?"dark":"light")}catch(e){document.documentElement.setAttribute("data-theme","light")}})();`;
   return <script dangerouslySetInnerHTML={{ __html: script }} />;
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [choice, setChoiceState] = useState<ThemeChoice>("dark");
+  const [choice, setChoiceState] = useState<ThemeChoice>("light");
 
   // Read the stored choice once mounted. The blocking script already applied it to the
   // DOM; this only syncs React's copy so the toggle renders the right active state.
+  //
+  // Must mirror the script's comparison exactly - test for "dark", default to light - or
+  // the toggle's icon disagrees with the theme actually painted.
   useEffect(() => {
-    let stored: ThemeChoice = "dark";
+    let stored: ThemeChoice = "light";
     try {
-      if (localStorage.getItem(STORAGE_KEY) === "light") stored = "light";
+      if (localStorage.getItem(STORAGE_KEY) === "dark") stored = "dark";
     } catch {
-      // Private browsing or blocked storage - dark is a fine fallback.
+      // Private browsing or blocked storage - light is the default, so nothing to do.
     }
     setChoiceState(stored);
   }, []);

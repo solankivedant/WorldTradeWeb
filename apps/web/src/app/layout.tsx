@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
+import { FooterGate } from "@/components/footer-gate";
 import { NavProgress } from "@/components/nav-progress";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider, ThemeScript } from "@/components/theme";
 import { allCountries } from "@/lib/data";
@@ -40,6 +42,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <SiteHeader countries={countries} />
               </Suspense>
               <main className="flex-1">{children}</main>
+              <FooterGate>
+                <SiteFooter />
+              </FooterGate>
             </div>
           </NuqsAdapter>
         </ThemeProvider>

@@ -117,7 +117,7 @@ Flow arcs encode direction with a gradient (origin → destination), value with 
 
 **Typography.** One sans for UI (Inter or similar). **Tabular figures everywhere numbers appear** — misaligned digits in a trade table are a real usability failure.
 
-**Theme.** Dark map / light map both supported; dark is the default because arcs read better on it. Chart palettes are defined per theme, not auto-inverted.
+**Theme.** Dark map / light map both supported. **Light is the default**, so a first-time visitor opening a shared link lands in light; only an explicit toggle stores `dark`. Arcs do read better on dark, which is why the near-neon export/import pair exists - it has to survive the light basemap too. Chart palettes are defined per theme, not auto-inverted.
 
 **Motion.** Arc animation is directional and slow (its job is showing direction, not drawing attention). Year transitions are interpolated, not cut. Respect `prefers-reduced-motion` — all animation becomes a static frame.
 
