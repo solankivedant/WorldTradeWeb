@@ -167,10 +167,16 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
   return (
     <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-3 border-b border-hairline bg-plane/95 px-3 backdrop-blur lg:gap-4 lg:px-4">
       <Link href="/" className="flex shrink-0 items-center gap-2">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-series-1/15">
-          <Globe2 className="h-4 w-4 text-series-1" aria-hidden />
+        {/* Sized up alongside the wordmark - a 28px badge read as an afterthought next to
+            20px type once the name grew. */}
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-series-1/15">
+          <Globe2 className="h-[18px] w-[18px] text-series-1" aria-hidden />
         </span>
-        <span className="hidden text-sm font-semibold tracking-tight sm:block">TradeCenter</span>
+        {/* Hidden below sm: the name is long enough that on a phone it would crowd out
+            the search field, which is the header's actual working control. */}
+        <span className="hidden text-lg font-semibold tracking-tight sm:block lg:text-xl">
+          WorldTradeWeb
+        </span>
       </Link>
 
       {/* ---- search ---- */}

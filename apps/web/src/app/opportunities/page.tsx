@@ -22,7 +22,7 @@ import {
 import { Crumb, Empty, ProvenanceBar, Warn } from "@/components/ui";
 import { usd } from "@/lib/format";
 
-export const metadata = { title: "Trade opportunities - TradeCenter" };
+export const metadata = { title: "Trade opportunities - WorldTradeWeb" };
 
 /** How many cards a page shows before the reader asks for more. */
 const PAGE_SIZE = 60;

@@ -15,7 +15,7 @@ import { pct, usd } from "@/lib/format";
 
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  return { title: `${sectorName(decodeURIComponent(code))} - global market | TradeCenter` };
+  return { title: `${sectorName(decodeURIComponent(code))} - global market | WorldTradeWeb` };
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ code: string }> }) {

@@ -35,7 +35,7 @@ import { flagEmoji, growth, pct, share, usd } from "@/lib/format";
 export async function generateMetadata({ params }: { params: Promise<{ iso: string }> }) {
   const { iso } = await params;
   const country = getCountry(iso);
-  return { title: country ? `${country.name} - trade profile | TradeCenter` : "Country" };
+  return { title: country ? `${country.name} - trade profile | WorldTradeWeb` : "Country" };
 }
 
 export default async function CountryPage({ params }: { params: Promise<{ iso: string }> }) {

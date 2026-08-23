@@ -26,7 +26,7 @@ export async function generateMetadata({
   const ca = getCountry(a);
   const cb = getCountry(b);
   return {
-    title: ca && cb ? `${ca.name} ↔ ${cb.name} - trade corridor | TradeCenter` : "Corridor",
+    title: ca && cb ? `${ca.name} ↔ ${cb.name} - trade corridor | WorldTradeWeb` : "Corridor",
   };
 }
 

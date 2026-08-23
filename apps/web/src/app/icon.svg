@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="WorldTradeWeb">
+  <!--
+    Favicon, picked by rendering it at 16 / 24 / 32 / 48 / 96px rather than by eye at one
+    size. The 16px tab icon is the constraint everything else bends to.
+
+    It carries its own blue field instead of drawing on transparency, because a tab strip
+    is light in one OS theme and near black in the other and a bare glyph vanishes into
+    one of them. Blue is the series-1 accent the header mark already uses; the arc is the
+    export green from FLOW.dark in lib/palette.ts, so the icon states the product's core
+    encoding (a flow leaving a country) in two marks.
+
+    ONE equator line, not a full graticule. A denser globe was tried and is better at
+    96px, but the lines merge into a grey blob by 16px, which is the size that matters.
+
+    Note for editors: an XML comment may not contain a double hyphen, so CSS token names
+    are written here without their leading prefix. A double hyphen makes the file
+    unparseable and every browser silently falls back to a broken icon.
+  -->
+  <rect width="64" height="64" rx="14" fill="#2A78D6" />
+  <g fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round">
+    <circle cx="32" cy="39" r="14" />
+    <ellipse cx="32" cy="39" rx="6.2" ry="14" />
+    <path d="M18.5 39h27" />
+  </g>
+  <path
+    d="M10 23C20 7 44 7 54 23"
+    fill="none"
+    stroke="#2BF59A"
+    stroke-width="6.5"
+    stroke-linecap="round"
+  />
+</svg>

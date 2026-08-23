@@ -6,7 +6,7 @@ import { allCountries, dataDir, dataset, latestYear, provenance } from "@/lib/da
 import { Empty } from "@/components/ui";
 
 export const metadata = {
-  title: "World trade map - TradeCenter",
+  title: "World trade map - WorldTradeWeb",
 };
 
 /**

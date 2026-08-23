@@ -15,7 +15,7 @@ import {
 import { Crumb, ProvenanceBar, Warn } from "@/components/ui";
 import { flagEmoji, pct } from "@/lib/format";
 
-export const metadata = { title: "Tariff explorer - TradeCenter" };
+export const metadata = { title: "Tariff explorer - WorldTradeWeb" };
 
 /**
  * Band edges, in percent. Chosen to match how the rates actually cluster rather than at

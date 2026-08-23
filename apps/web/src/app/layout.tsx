@@ -10,7 +10,7 @@ import { allCountries } from "@/lib/data";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "TradeCenter - global trade, mapped",
+  title: "WorldTradeWeb - global trade, mapped",
   description:
     "Interactive world map of import/export flows, tariffs, and product-level trade between countries, with a rule-based engine that surfaces trade opportunities.",
 };

@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Crumb, Warn } from "@/components/ui";
 
-export const metadata = { title: "Data & methodology - TradeCenter" };
+export const metadata = { title: "Data & methodology - WorldTradeWeb" };
 
 interface FullMeta {
   vintage: string;
