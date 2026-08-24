@@ -45,6 +45,31 @@ const SECTOR_NAMES: Record<string, string> = Object.fromEntries(
   SECTOR_CATALOG.map((s) => [s.code, s.name]),
 );
 
+/**
+ * Published shape of `mirror.json` - figures REBUILT from partner reports for economies
+ * that file nothing themselves.
+ *
+ * A separate file from `totals.json` and `products.json` on purpose. These are derived,
+ * not measured, and keeping them in their own store means no caller can pick one up while
+ * believing it holds a reported figure: it has to ask for a mirror figure by name.
+ */
+interface MirrorFile {
+  codes: string[];
+  method: string;
+  year: number;
+  countries: Record<
+    string,
+    {
+      exports: number | null;
+      imports: number | null;
+      /** How many partners contributed. The honest weight of the estimate. */
+      exportPartners: number;
+      importPartners: number;
+      sectors: { x: [number, number][]; m: [number, number][] };
+    }
+  >;
+}
+
 interface Meta {
   vintage: string;
   built_at: string;
@@ -133,6 +158,7 @@ interface Dataset {
   exportsByReporter: Map<string, BilateralRow[]>;
   importsByReporter: Map<string, BilateralRow[]>;
   sectors: BilateralSectorsFile;
+  mirror: MirrorFile;
   /**
    * Who ships a given sector INTO a country, keyed `${destination}|${sectorIndex}`.
    *
@@ -201,6 +227,12 @@ export function dataset(): Dataset {
     codes: [],
     flows: {},
   });
+  const mirror = read<MirrorFile>("mirror.json", {
+    codes: [],
+    method: "",
+    year: 0,
+    countries: {},
+  });
 
   // Who filed an export report of any kind. Everyone else is a non-reporter, and their
   // side of a corridor has to come from whoever traded with them.
@@ -249,6 +281,7 @@ export function dataset(): Dataset {
     exportsByReporter,
     importsByReporter,
     sectors,
+    mirror,
     inboundBySector,
     nonReporters,
     ready: countries.length > 0 && bilateral.length > 0,
@@ -726,4 +759,104 @@ export function allRegions(): string[] {
   const seen = new Set<string>();
   for (const c of dataset().countries) if (c.region) seen.add(c.region.trim());
   return [...seen].sort();
+}
+
+// ------------------------------------------------------------- mirror estimates
+//
+// 61 economies file no trade report at all - Russia, Iraq, Bangladesh, Algeria, Iran and
+// 56 others - and UN Comtrade has nothing for them either (verified live for RUS and BGD,
+// 2023: HTTP 200, zero rows). Their trade is rebuilt from what their partners report,
+// which is the same mirror method the OEC applies to the same problem.
+//
+// These are ESTIMATES and the type says so. Nothing here is merged into `totalsFor` or
+// `productsFor`: a caller that wants a mirror figure asks for one, and every screen that
+// shows one labels it. Blending the two would put a derived number under the same styling
+// as a customs declaration, which is the single easiest way to lose a reader's trust.
+
+export interface MirrorEstimate {
+  iso3: string;
+  exports: number | null;
+  imports: number | null;
+  /** Partners contributing to each side. A total from 3 partners is not one from 130. */
+  exportPartners: number;
+  importPartners: number;
+  year: number;
+  sectors: { code: string; name: string; exports: number | null; imports: number | null }[];
+}
+
+/** The mirror estimate for a silent economy, or null if it reports for itself. */
+export function mirrorFor(iso3: string): MirrorEstimate | null {
+  const { mirror } = dataset();
+  const row = mirror.countries[iso3.toUpperCase()];
+  if (!row) return null;
+
+  const bySector = new Map<
+    string,
+    { code: string; name: string; exports: number | null; imports: number | null }
+  >();
+  const put = (index: number, value: number, side: "exports" | "imports") => {
+    const code = mirror.codes[index];
+    if (!code) return;
+    const existing = bySector.get(code);
+    if (existing) existing[side] = value;
+    else
+      bySector.set(code, {
+        code,
+        name: SECTOR_NAMES[code] ?? code,
+        exports: side === "exports" ? value : null,
+        imports: side === "imports" ? value : null,
+      });
+  };
+  for (const [index, value] of row.sectors.x) put(index, value, "exports");
+  for (const [index, value] of row.sectors.m) put(index, value, "imports");
+
+  return {
+    iso3: iso3.toUpperCase(),
+    exports: row.exports,
+    imports: row.imports,
+    exportPartners: row.exportPartners,
+    importPartners: row.importPartners,
+    year: mirror.year,
+    // Ranked by TOTAL trade, never one side - the standing rule for every paired list.
+    sectors: [...bySector.values()].sort(
+      (a, b) => (b.exports ?? 0) + (b.imports ?? 0) - ((a.exports ?? 0) + (a.imports ?? 0)),
+    ),
+  };
+}
+
+/** How the mirror figures were built, for the methodology page. */
+export function mirrorMethod(): { method: string; year: number; countries: number } {
+  const { mirror } = dataset();
+  return {
+    method: mirror.method,
+    year: mirror.year,
+    countries: Object.keys(mirror.countries).length,
+  };
+}
+
+/**
+ * A silent economy's partners, rebuilt from the other side of each corridor.
+ *
+ * `partnersFor` reads the country's own export/import books and returns nothing for these
+ * economies, because there are no books. Here the inversion is explicit: a reporter's
+ * IMPORT record naming this country as the source is one of its exports, and a reporter's
+ * EXPORT record naming it as the destination is one of its imports.
+ */
+export function mirrorPartners(
+  iso3: string,
+  limit = 40,
+): { exports: { iso3: string; value: number }[]; imports: { iso3: string; value: number }[] } {
+  const iso = iso3.toUpperCase();
+  const { bilateral } = dataset();
+  const sold: { iso3: string; value: number }[] = [];
+  const bought: { iso3: string; value: number }[] = [];
+
+  for (const row of bilateral) {
+    if (row.p !== iso) continue;
+    if (row.f === "m") sold.push({ iso3: row.r, value: row.v });
+    else bought.push({ iso3: row.r, value: row.v });
+  }
+  sold.sort((a, b) => b.value - a.value);
+  bought.sort((a, b) => b.value - a.value);
+  return { exports: sold.slice(0, limit), imports: bought.slice(0, limit) };
 }

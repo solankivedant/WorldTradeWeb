@@ -372,6 +372,84 @@ def build(vintage: str) -> dict:
     stats["bilateral_rows"] = len(bilateral)
     stats["dropped_partner_codes"] = dict(sorted(dropped_codes.items(), key=lambda kv: -kv[1])[:15])
 
+    # --- mirror aggregates for countries that report nothing -----------------
+    #
+    # 61 economies file no export report with WITS, and Comtrade has nothing for them
+    # either (verified live for RUS and BGD, 2023: HTTP 200, zero rows). Russia alone is
+    # $424B of exports. Left as-is their country pages read "does not report" while the
+    # map, which reconstructs corridors from partners, shows them trading hundreds of
+    # billions - the product contradicting itself.
+    #
+    # The fix is MIRROR DATA: every export from one country is an import to another, so a
+    # silent country's trade can be rebuilt from what its partners say about it. This is
+    # the same method the OEC uses for the same problem, and it is derivation, not
+    # measurement - so it is published to its OWN file, tagged, counted, and never merged
+    # into `totals` or `products` where a reader could mistake it for a reported figure.
+    #
+    # `partners` travels with every figure because it is the only honest measure of how
+    # much weight it carries: a total assembled from 120 partners is a good estimate, one
+    # assembled from 3 is barely a hint, and the number is the difference between them.
+    mirror: dict[str, dict] = {}
+    reporting = {row["r"] for row in bilateral}
+    silent = sorted(iso for iso in countries if iso not in reporting)
+
+    # Corridor totals, seen from the other side.
+    mirror_x: dict[str, float] = defaultdict(float)
+    mirror_m: dict[str, float] = defaultdict(float)
+    mirror_xp: dict[str, set] = defaultdict(set)
+    mirror_mp: dict[str, set] = defaultdict(set)
+    for row in bilateral:
+        partner = row["p"]
+        if partner in reporting:
+            continue
+        if row["f"] == "m":
+            # The reporter says it BOUGHT from `partner`, so `partner` sold.
+            mirror_x[partner] += row["v"]
+            mirror_xp[partner].add(row["r"])
+        else:
+            mirror_m[partner] += row["v"]
+            mirror_mp[partner].add(row["r"])
+
+    # Sector mix, same inversion over the corridor-sector cube.
+    mirror_sectors: dict[str, dict[str, dict[int, float]]] = defaultdict(
+        lambda: {"x": defaultdict(float), "m": defaultdict(float)}
+    )
+    for reporter, flows in bilateral_sectors.items():
+        for flow, partners in flows.items():
+            # reporter's imports (`m`) from a silent partner are that partner's exports.
+            side = "x" if flow == "m" else "m"
+            for partner, slices in partners.items():
+                if partner in reporting:
+                    continue
+                for index, value in slices:
+                    mirror_sectors[partner][side][index] += value
+
+    for iso in silent:
+        exports = mirror_x.get(iso, 0.0)
+        imports = mirror_m.get(iso, 0.0)
+        if exports <= 0 and imports <= 0:
+            # Nobody reports trading with them either. Genuinely absent, and mostly
+            # territories counted inside a parent customs union (Monaco inside France,
+            # Puerto Rico inside the USA). Publishing a zero here would invent a fact.
+            continue
+        slices = mirror_sectors.get(iso, {"x": {}, "m": {}})
+        mirror[iso] = {
+            "exports": round(exports, 1) if exports > 0 else None,
+            "imports": round(imports, 1) if imports > 0 else None,
+            "exportPartners": len(mirror_xp.get(iso, ())),
+            "importPartners": len(mirror_mp.get(iso, ())),
+            "sectors": {
+                flow: sorted(
+                    ([index, round(value, 1)] for index, value in slices[flow].items()),
+                    key=lambda pair: -pair[1],
+                )
+                for flow in ("x", "m")
+            },
+        }
+
+    stats["mirror_countries"] = len(mirror)
+    stats["silent_reporters"] = len(silent)
+
     # --- context indicators, conformed to the country set ---
     context = {
         iso: {
@@ -387,6 +465,7 @@ def build(vintage: str) -> dict:
         "totals": totals,
         "bilateral": bilateral,
         "bilateral_sectors": bilateral_sectors,
+        "mirror": mirror,
         "products": products,
         "tariffs": tariffs,
         "context": context,
@@ -406,6 +485,25 @@ def validate(data: dict) -> list[str]:
 
     if data["stats"]["bilateral_rows"] < 10_000:
         problems.append(f"only {data['stats']['bilateral_rows']} bilateral rows -- fetch likely incomplete")
+
+    # A mirror figure assembled from one or two partners is not an estimate, it is a
+    # rumour. Anything that thin should not be published as a country total.
+    thin = [
+        iso
+        for iso, row in data["mirror"].items()
+        if row["exports"] is not None and row["exportPartners"] < 3
+    ]
+    if len(thin) > len(data["mirror"]) * 0.35:
+        problems.append(
+            f"{len(thin)}/{len(data['mirror'])} mirror totals rest on fewer than 3 "
+            "reporting partners -- the inversion is probably picking up the wrong side"
+        )
+
+    # Russia is the largest silent economy and the reason this exists. If its mirror
+    # export total is not in the right order of magnitude, the inversion is inverted.
+    rus = data["mirror"].get("RUS", {}).get("exports")
+    if rus is not None and not (2e11 <= rus <= 8e11):
+        problems.append(f"mirror RUS exports ${rus:,.0f} outside the plausible $200-800B band")
 
     if data["stats"]["bilateral_sector_rows"] < 100_000:
         problems.append(
@@ -533,6 +631,23 @@ def publish(data: dict, vintage: str) -> None:
         "bilateral_sectors.json",
         {"codes": list(SECTOR_LABELS), "flows": data["bilateral_sectors"]},
     )
+    # Derived, not measured. Its own file so nothing downstream can read a mirror figure
+    # while thinking it holds a reported one - the UI has to ask for it by name.
+    write(
+        "mirror.json",
+        {
+            "codes": list(SECTOR_LABELS),
+            "method": (
+                "Rebuilt from partner reports for economies that file nothing themselves. "
+                "Every export from one country is an import to another, so a silent "
+                "country's trade is the sum of what its partners say about it. Derived, "
+                "not reported: valuation basis, timing and re-export treatment all differ "
+                "between the partners contributing to a single figure."
+            ),
+            "year": latest_year,
+            "countries": data["mirror"],
+        },
+    )
     write("products.json", data["products"])
     write("tariffs.json", data["tariffs"])
     write("context.json", data["context"])
@@ -567,6 +682,7 @@ def publish(data: dict, vintage: str) -> None:
             "Re-export hubs (Singapore, Netherlands, Hong Kong, UAE) report transit volumes as their own trade.",
             "Tariff figures are simple averages across products and hide wide dispersion within a partner relationship.",
             "Absent data means not reported, not zero. The two are kept distinct throughout.",
+            "61 economies file no trade report at all (Russia, Iraq, Bangladesh, Algeria and others). Their figures in mirror.json are rebuilt from partner reports and are estimates, labelled as such wherever shown, and never merged into the reported totals.",
         ],
         "stats": data["stats"],
         "reconciliation_warnings": data.get("reconcile_failures", []),

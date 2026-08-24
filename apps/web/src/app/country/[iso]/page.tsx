@@ -17,6 +17,8 @@ import {
   gdpFor,
   getCountry,
   latestYear,
+  mirrorFor,
+  mirrorPartners,
   partnersFor,
   productsFor,
   provenance,
@@ -32,6 +34,7 @@ import { PartnerCompare } from "@/components/charts/partner-compare";
 import { pairPartners, pairSectors } from "@/lib/pairing";
 import { growth, pct, share, usd } from "@/lib/format";
 import { CountryFlag } from "@/components/country-flag";
+import { MirrorCountry, toMirrorPairs } from "@/components/mirror-country";
 
 export async function generateMetadata({ params }: { params: Promise<{ iso: string }> }) {
   const { iso } = await params;
@@ -92,6 +95,41 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
   const hasReconIssue = reconWarnings.some((w) => w.startsWith(country.iso3));
 
   if (exports === null && imports === null && !exportProducts.length) {
+    /**
+     * Nothing reported. Before giving up, check whether the country's partners describe
+     * it - 53 of the 61 silent economies are reconstructable that way, and Russia at
+     * $424B is the largest of them. The map already draws those corridors, so a page
+     * that says "does not report" here is the product contradicting itself, with the
+     * less accurate half winning.
+     *
+     * A separate component, not a branch inside this one: mirror figures must never
+     * share a render path with reported ones.
+     */
+    const estimate = mirrorFor(country.iso3);
+    if (estimate) {
+      const mirrored = mirrorPartners(country.iso3, 40);
+      const named = (rows: { iso3: string; value: number }[]) =>
+        rows.map((row) => {
+          const partner = getCountry(row.iso3);
+          return {
+            iso3: row.iso3,
+            name: partner?.name ?? row.iso3,
+            iso2: partner?.iso2 ?? null,
+            value: row.value,
+            share: null,
+          };
+        });
+      return (
+        <MirrorCountry
+          country={country}
+          estimate={estimate}
+          partners={toMirrorPairs(named(mirrored.exports), named(mirrored.imports))}
+          meta={meta}
+          worldTotal={worldTotal}
+        />
+      );
+    }
+
     return (
       <div className="mx-auto max-w-3xl p-6">
         <Crumb items={[{ label: "Map", href: "/" }, { label: country.name }]} />
@@ -101,8 +139,8 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
         </h1>
         <div className="card mt-6">
           <Empty
-            message={`${country.name} does not report trade statistics to this source.`}
-            hint="Absent data is not zero. Some economies report to UN Comtrade but not to WITS, and some do not report at all."
+            message={`${country.name} does not report trade statistics, and no partner reports trading with it.`}
+            hint="Absent data is not zero. Several entries here are territories counted inside a parent customs union - Monaco within France, Puerto Rico within the United States - so their trade appears under that parent rather than being missing."
           />
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { dataset } from "@/lib/data";
+import { dataset, mirrorMethod } from "@/lib/data";
 import {
   ArrowRight,
   Boxes,
@@ -15,9 +15,10 @@ import {
   ScrollText,
   Share2,
   ShieldCheck,
+  Sigma,
   TriangleAlert,
 } from "lucide-react";
-import { Crumb, Warn } from "@/components/ui";
+import { Crumb, EstimateTag, Warn } from "@/components/ui";
 
 export const metadata = { title: "Source - WorldTradeWeb" };
 
@@ -120,6 +121,8 @@ const PIPELINE = [
 
 export default function DataPage() {
   const meta = dataset().meta as unknown as FullMeta;
+  const mirror = mirrorMethod();
+  const silentTotal = Number(meta.stats?.silent_reporters ?? mirror.countries);
   const stats = meta.stats ?? {};
   const droppedCodes = (stats.dropped_partner_codes ?? {}) as Record<string, number>;
 
@@ -297,6 +300,57 @@ export default function DataPage() {
         </dl>
       </Section>
 
+      {/* ---- the one derived dataset on the site ---- */}
+      <Section
+        title="Countries that report nothing"
+        icon={<Sigma className="h-3 w-3" aria-hidden />}
+      >
+        <div className="card p-4">
+          <p className="text-xs leading-relaxed text-ink-secondary">
+            <span className="font-medium text-ink">{mirror.countries} economies</span> file
+            no trade report with WITS for {mirror.year}, and UN Comtrade has nothing for
+            them either - Russia, Iraq, Bangladesh, Algeria and Iran among them. Russia
+            alone accounts for an estimated $424B of exports. Left out entirely, those
+            countries would be holes in every ranking on this site, and the holes would be
+            invisible: a corridor that is simply absent reads as no trade rather than as
+            nobody publishing.
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-ink-secondary">
+            So their figures are rebuilt from the other side of each corridor. Every export
+            from one country is an import to another, so a silent country&apos;s trade is
+            the sum of what its partners say about it. This is the only derived dataset on
+            the site. It is published to its own file (<code>mirror.json</code>), never
+            merged into the reported totals, and carries an <EstimateTag /> tag wherever it
+            appears.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <Derived
+              label="Rebuilt from partners"
+              value={String(mirror.countries)}
+              hint="economies with a usable estimate"
+            />
+            <Derived
+              label="Report nothing at all"
+              value={String(silentTotal)}
+              hint="of which some have no partner records either"
+            />
+            <Derived
+              label="Method"
+              value="Mirror"
+              hint="partner records inverted, never modelled"
+            />
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-ink-muted">
+            Two biases come with it, and both point the same way. Trade between two silent
+            economies leaves no record on either side and is missing entirely, which pushes
+            the totals DOWN. Partner records also use the buyer&apos;s valuation, which
+            normally carries freight and insurance where the seller&apos;s would not, which
+            pushes an estimated export figure UP against what the country would have
+            reported itself. Read them as a range, not a measurement.
+          </p>
+        </div>
+      </Section>
+
       {/* ---- weaknesses ---- */}
       <Section
         title="Where the data is weakest"
@@ -459,5 +513,18 @@ function Section({
       </h2>
       {children}
     </section>
+  );
+}
+
+/** Three facts about the derived dataset, styled apart from the reported ones. */
+function Derived({ label, value, hint }: { label: string; value: string; hint: string }) {
+  return (
+    <div className="rounded-md border border-status-warning/25 bg-status-warning/5 px-3 py-2">
+      <div className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
+        {label}
+      </div>
+      <div className="tabular mt-1 text-lg font-semibold leading-none text-ink">{value}</div>
+      <div className="mt-1 text-2xs leading-snug text-ink-muted">{hint}</div>
+    </div>
   );
 }

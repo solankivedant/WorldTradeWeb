@@ -59,8 +59,8 @@ figures from World Bank WITS.
 | `/opportunities` | Rule-based scoring with a full per-card score breakdown |
 | `/source` | Sources, units, pipeline stages, build stats, reconciliation warnings |
 
-Real coverage: **190 reporting countries · 47,241 bilateral flows · 435,626 corridor-sector
-slices · 16 HS sector groups · 2010-2023 · ~20,600 tariff pairs.** Country totals match published reality (China $3,380B,
+Real coverage: **190 reporting countries + 53 mirror-estimated · 47,241 bilateral flows ·
+435,626 corridor-sector slices · 16 HS sector groups · 2010-2023 · ~20,600 tariff pairs.** Country totals match published reality (China $3,380B,
 USA $2,019B, Germany $1,726B, India $431B for 2023).
 
 2023 is the newest year WITS publishes. The frontier moves one year at a time and sits
@@ -137,6 +137,38 @@ reporting country that merely omits one corridor, and label every fallen-back ro
 `nonReporters` in `lib/data.ts` is the set; `PartnerValue.src` and `CorridorRow.src` carry
 the provenance to the UI. A mirror gap is meaningless on a fallen-back corridor - there is
 only one source - so it is null rather than 0%.
+
+**OEC (oec.world) is off limits as a source, and it would add nothing anyway.** Their
+terms restrict API / Data Explorer / Bulk Download output to "internal use", which
+"explicitly excludes data dissemination to any entity outside of the institutional unit" -
+a public site is dissemination - and API access needs a paid Pro/Premium plan. Only their
+VISUALIZATIONS are CC0, not the data. Separately, their answer for silent economies is
+mirror data rebuilt from partner reports, which is the method already implemented here, so
+the licence risk would buy no information. Do not scrape the profile pages; oec.world
+returns 403 to automated requests, which is a decision, not an obstacle to route around.
+
+**61 economies file nothing, and 53 of them are reconstructable.** UN Comtrade has nothing
+for them either (verified live: RUS and BGD, 2023, HTTP 200 with zero rows) - so there is
+no primary source to switch to and mirror derivation is the only honest option. `mirror.json`
+holds it, built in `build.py` by inverting every corridor: a reporter's IMPORT record naming
+a silent country is one of that country's exports. Russia comes out at $424B from 148
+partners, against a real 2023 figure of about $425B.
+
+Three rules keep it from poisoning the reported data:
+1. **Its own published file, its own access functions** (`mirrorFor`, `mirrorPartners`), never
+   merged into `totals.json` or `products.json`. A caller has to ask for an estimate by name.
+2. **Its own page component** (`components/mirror-country.tsx`). Mirror figures never share a
+   render path with reported ones, and the method is stated ABOVE the numbers, not in a
+   footnote below them.
+3. **The partner COUNT ships with every figure**, because it is the only honest measure of
+   weight - $424B from 148 partners is a good estimate, the same number from three would be
+   a rumour, and nothing else distinguishes them.
+
+Both biases point one way and are stated on the page: trade between two silent economies is
+invisible (pushes totals DOWN), and partner records carry the buyer's CIF valuation where the
+seller's would be FOB (pushes an estimated export figure UP). Read as a range, not a point.
+The 8 with no partner records either are mostly territories counted inside a parent customs
+union (Monaco in France, Puerto Rico in the USA) - not missing data, and never a published zero.
 
 **The sector lens narrows the flows, not just the choropleth.** A filter that repaints the
 map but leaves the arcs showing total trade says two different things on one screen, and

@@ -40,6 +40,7 @@ export function PartnerCompare({
   variant = "corridor",
   title = "Top trading partners",
   subtitle,
+  footnote,
   limit = 10,
 }: {
   rows: PartnerPair[];
@@ -50,6 +51,12 @@ export function PartnerCompare({
   variant?: "corridor" | "country";
   title?: string;
   subtitle?: string;
+  /**
+   * Overrides the default sourcing note. Required on the mirror pages: the default says
+   * both sides come from each country's own export report, which is exactly the thing
+   * that is NOT true for an economy whose figures were rebuilt from its partners.
+   */
+  footnote?: string;
   limit?: number;
 }) {
   const { resolved } = useTheme();
@@ -85,9 +92,10 @@ export function PartnerCompare({
         { key: "net", label: "Balance", align: "right", render: (r) => usdFull(r.net) },
       ]}
       footnote={
-        corridor
+        footnote ??
+        (corridor
           ? "Both figures come from each country's own export report, so the two sides are measured the same way rather than one being a mirror of the other. Ranked by total trade with the partner."
-          : "Each country's own reported exports and imports in this sector. Ranked by the two added together, so a country is not promoted by one side alone."
+          : "Each country's own reported exports and imports in this sector. Ranked by the two added together, so a country is not promoted by one side alone.")
       }
     >
       <CompareLegend
