@@ -13,16 +13,21 @@ import {
   Users,
 } from "lucide-react";
 import { Crumb, ProvenanceBar, Warn } from "@/components/ui";
-import { flagEmoji, pct } from "@/lib/format";
+import { pct } from "@/lib/format";
+import { CountryFlag } from "@/components/country-flag";
+import { TARIFF_BAND_META } from "@/lib/palette";
 
 export const metadata = { title: "Tariff explorer - WorldTradeWeb" };
 
 /**
- * Band edges, in percent. Chosen to match how the rates actually cluster rather than at
- * round tenths: the mass of any schedule sits between 0 and 15, and everything above that
- * is a small tail worth showing as one group.
+ * Band edges, labels and colours all come from `TARIFF_BAND_META` / `tariffBands` in the
+ * palette. They are the same six steps everywhere on this page - the distribution chart,
+ * the region bars, the table pills and the band filter - so one rate never wears two
+ * colours or two names. The edges themselves match how rates actually cluster rather than
+ * round tenths: the mass of any schedule sits between 0 and 15, and the tail above that is
+ * one group.
  */
-const BAND_EDGES = [0.5, 2.5, 5, 10, 15] as const;
+const DUTY_FREE_EDGE = TARIFF_BAND_META[0].max;
 
 export default async function TariffsPage({
   searchParams,
@@ -56,19 +61,17 @@ export default async function TariffsPage({
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const average = avgTariff(reporter);
-  const zeroRated = rows.filter((r) => r.rate < BAND_EDGES[0]).length;
+  const zeroRated = rows.filter((r) => r.rate < DUTY_FREE_EDGE).length;
   const highest = rows.length ? rows[rows.length - 1] : null;
 
-  const bands: RateBand[] = [
-    { label: "Duty-free", hint: "under 0.5%", count: 0, dutyFree: true },
-    { label: "Low", hint: "0.5-2.5%", count: 0 },
-    { label: "Moderate", hint: "2.5-5%", count: 0 },
-    { label: "Elevated", hint: "5-10%", count: 0 },
-    { label: "High", hint: "10-15%", count: 0 },
-    { label: "Very high", hint: "over 15%", count: 0 },
-  ];
+  const bands: RateBand[] = TARIFF_BAND_META.map((b) => ({
+    label: b.label,
+    hint: b.range,
+    count: 0,
+    dutyFree: b.dutyFree,
+  }));
   for (const row of rows) {
-    const index = BAND_EDGES.findIndex((edge) => row.rate < edge);
+    const index = TARIFF_BAND_META.findIndex((b) => row.rate < b.max);
     bands[index === -1 ? bands.length - 1 : index].count += 1;
   }
 
@@ -126,8 +129,8 @@ export default async function TariffsPage({
           value={String(zeroRated)}
           hint={
             rows.length
-              ? `${((zeroRated / rows.length) * 100).toFixed(0)}% of partners, under 0.5%`
-              : "under 0.5%"
+              ? `${((zeroRated / rows.length) * 100).toFixed(0)}% of partners, ${TARIFF_BAND_META[0].range}`
+              : TARIFF_BAND_META[0].range
           }
         />
         <Kpi
@@ -160,10 +163,10 @@ export default async function TariffsPage({
                 <li key={row.iso3} className="border-b border-hairline/60 py-1.5 last:border-0">
                   <Link
                     href={`/corridor/${row.iso3}/${reporter}`}
-                    className="flex items-baseline justify-between gap-2 text-xs hover:underline"
+                    className="flex items-center justify-between gap-2 text-xs hover:underline"
                   >
-                    <span className="flex min-w-0 items-baseline gap-1.5">
-                      <span aria-hidden>{flagEmoji(row.iso2)}</span>
+                    <span className="flex min-w-0 items-center gap-1.5">
+                      <CountryFlag iso2={row.iso2} name={row.name} size="sm" />
                       <span className="truncate text-ink-secondary">{row.name}</span>
                     </span>
                     <span className="tabular shrink-0 font-medium text-ink">{pct(row.rate)}</span>

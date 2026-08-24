@@ -110,6 +110,45 @@ reorders a list depending on which direction you happen to be looking at, which 
 split-view problem in another form. And `net` stays null unless both sides are reported -
 half a comparison is not a comparison.
 
+**Direction is never left to colour and a legend.** A ten-row partner list scrolls its
+legend off screen by row eight, and on a partner row there are two countries so a bare
+"Exports" does not say whose. Every compare row therefore repeats the cue three ways: the
+same out-of-a-line / into-a-line arrows the KPI tiles use, sit beside each value; the
+legend and the table headers name the reporting country ("India exports to partner",
+"Partner exports to India"); and each half of the track carries the full sentence as a
+tooltip and in its `aria-label`. `CompareBar`/`CompareLegend` take `exportLabel` and
+`importLabel` for exactly this - a caller that leaves them at the default is a caller that
+has not said whose trade it is drawing.
+
+`PartnerCompare` has two variants and they are not interchangeable. `corridor` is a
+reporting country's partner list: green is the reporter exporting out, red is the partner
+exporting back, and the row links to that corridor. `country` is a list of countries
+ranked by their own trade in a sector (the product page): the bars are that country's own
+two sides and the row links to the country. Rendering the second as the first is how the
+product page ended up pointing every row at a corridor with an arbitrary origin, with the
+top row linked to itself.
+
+**Flags are SVG files in `public/flags/`, never emoji.** The old `flagEmoji` helper built
+a regional-indicator pair and left the OS to draw it; Windows ships no flag glyphs, so
+every flag in the product silently degraded to a bare two-letter code. `CountryFlag`
+serves a local file keyed by lowercase ISO 3166-1 alpha-2, is server-component safe, and
+falls back to the ISO letters in a same-sized box for territories with no published flag
+(Channel Islands). Refresh the set with `node scripts/fetch-flags.mjs` - it skips files
+already on disk and writes a provenance sidecar. Nothing on a page reaches an external
+host at runtime, and flags must not be the exception.
+
+**One rate, one colour, across the whole tariff page.** The band edges, labels, ramp and
+per-band ink all come from `tariffBands` / `TARIFF_BAND_META` in `lib/palette.ts`. The
+distribution columns, the region bars, the table pills and the band filter all read them,
+because when each surface restated its own edges "Elevated" meant one blue in the chart
+and a different one in the table three cards down. The ramp is ORDINAL - one hue, monotone
+lightness, stepped per surface - and both directions clear the dataviz ordinal checks;
+re-run `validate_palette.js --ordinal` against the right surface if either is touched.
+`ink` is measured, not chosen: the mid-blues sit on the 4.5:1 boundary, so a rate can only
+be printed ON its band colour with the ink the table records. Duty-free stays the reserved
+status-good colour because an agreement being in force is a different kind of fact from a
+small number.
+
 **Prose uses plain hyphens, never em or en dashes.** There is a check for this - see the
 sweep in the session history if it regresses.
 

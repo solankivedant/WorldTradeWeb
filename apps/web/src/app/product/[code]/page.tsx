@@ -119,9 +119,9 @@ export default async function ProductPage({ params }: { params: Promise<{ code: 
       <div className="mt-3">
         <PartnerCompare
           rows={byTotal}
-          originIso={byTotal[0]?.iso3 ?? "USA"}
+          variant="country"
           title="Who trades this sector"
-          subtitle={`${year} · exports against imports, ranked by total trade in the sector`}
+          subtitle={`${year} · each country's own exports against its own imports, ranked by the two combined`}
           limit={14}
         />
       </div>

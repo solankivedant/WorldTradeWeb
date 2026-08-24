@@ -15,7 +15,8 @@ import {
 import { flowColors } from "@/lib/palette";
 import { CompareBar, CompareLegend } from "@/components/charts/compare-bar";
 import { useTheme } from "@/components/theme";
-import { flagEmoji, growth, usd } from "@/lib/format";
+import { growth, usd } from "@/lib/format";
+import { CountryFlag } from "@/components/country-flag";
 import type { CountryDetail } from "./types";
 
 const PANEL_W = 340;
@@ -132,9 +133,7 @@ export function CountryPanel({
         className="flex cursor-grab items-center gap-2 border-b border-hairline bg-raised/60 px-3 py-2 active:cursor-grabbing"
       >
         <GripHorizontal className="h-3.5 w-3.5 shrink-0 text-ink-muted" aria-hidden />
-        <span className="text-base leading-none" aria-hidden>
-          {flagEmoji(detail.iso2)}
-        </span>
+        <CountryFlag iso2={detail.iso2} name={detail.name} size="md" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-semibold leading-tight text-ink">
             {detail.name}
@@ -194,7 +193,11 @@ export function CountryPanel({
         {/* ---- sector mix, both directions on one centre line ---- */}
         {detail.sectors.length > 0 && (
           <Section title="Trade by sector">
-            <CompareLegend className="mb-2" />
+            <CompareLegend
+              className="mb-2"
+              exportLabel={`${detail.name} sells`}
+              importLabel={`${detail.name} buys`}
+            />
             <ul className="space-y-2">
               {detail.sectors.map((s) => (
                 <li key={s.code}>
@@ -217,6 +220,8 @@ export function CountryPanel({
                       scale={sectorMax}
                       showValues={false}
                       height={5}
+                      exportLabel={`${detail.name} exports of ${s.name.toLowerCase()}`}
+                      importLabel={`${detail.name} imports of ${s.name.toLowerCase()}`}
                     />
                   </div>
                 </li>
@@ -229,7 +234,7 @@ export function CountryPanel({
         <Section title="Where it trades">
           <div className="space-y-2.5">
             <PartnerBlock
-              heading="Top export markets"
+              heading={`${detail.name} sells to`}
               icon={<ArrowUpRight className="h-3 w-3" aria-hidden />}
               color={colors.export}
               rows={detail.topExports}
@@ -238,9 +243,10 @@ export function CountryPanel({
               names={countryNames}
               iso2={countryIso2}
               direction="out"
+              reporterName={detail.name}
             />
             <PartnerBlock
-              heading="Top import sources"
+              heading={`${detail.name} buys from`}
               icon={<ArrowDownLeft className="h-3 w-3" aria-hidden />}
               color={colors.import}
               rows={detail.topImports}
@@ -249,6 +255,7 @@ export function CountryPanel({
               names={countryNames}
               iso2={countryIso2}
               direction="in"
+              reporterName={detail.name}
             />
           </div>
         </Section>
@@ -328,6 +335,7 @@ function PartnerBlock({
   names,
   iso2,
   direction,
+  reporterName,
 }: {
   heading: string;
   icon: React.ReactNode;
@@ -338,13 +346,16 @@ function PartnerBlock({
   names: Record<string, string>;
   iso2: Record<string, string | null>;
   direction: "out" | "in";
+  /** Named in each row's tooltip - a partner list has two countries in it, so "exports"
+   *  on its own never says whose. */
+  reporterName: string;
 }) {
   if (!rows.length) {
     return (
       <div>
         <div className="mb-1 flex items-center gap-1 text-2xs font-medium" style={{ color }}>
           {icon}
-          {heading}
+          <span className="truncate">{heading}</span>
         </div>
         <p className="text-2xs text-ink-muted">Not reported.</p>
       </div>
@@ -355,8 +366,8 @@ function PartnerBlock({
     <div>
       <div className="mb-1 flex items-center gap-1 text-2xs font-medium" style={{ color }}>
         {icon}
-        {heading}
-        <span className="ml-auto font-normal text-ink-muted">{total} partners</span>
+        <span className="truncate">{heading}</span>
+        <span className="ml-auto shrink-0 font-normal text-ink-muted">{total} partners</span>
       </div>
       <ul>
         {rows.slice(0, 4).map((row) => (
@@ -367,9 +378,18 @@ function PartnerBlock({
                   ? `/corridor/${iso}/${row.iso}`
                   : `/corridor/${row.iso}/${iso}`
               }
+              title={
+                direction === "out"
+                  ? `${reporterName} exports ${usd(row.v)} to ${names[row.iso] ?? row.iso}`
+                  : `${names[row.iso] ?? row.iso} exports ${usd(row.v)} to ${reporterName}`
+              }
               className="flex items-center gap-1.5 rounded-md px-1 py-1 text-2xs transition-colors hover:bg-raised"
             >
-              <span aria-hidden>{flagEmoji(iso2[row.iso] ?? null)}</span>
+              <CountryFlag
+                iso2={iso2[row.iso] ?? null}
+                name={names[row.iso] ?? row.iso}
+                size="sm"
+              />
               <span className="min-w-0 flex-1 truncate text-ink-secondary">
                 {names[row.iso] ?? row.iso}
               </span>

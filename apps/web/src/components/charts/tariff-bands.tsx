@@ -1,14 +1,20 @@
+"use client";
+
 import { CircleCheck } from "lucide-react";
+import { useTheme } from "@/components/theme";
+import { tariffBands } from "@/lib/palette";
 
 /**
  * How a reporter's applied rates are distributed across its partners.
  *
- * Counts by band, as columns. The bands are ordered magnitude, so they take a single-hue
- * sequential ramp - stepped opacities of the accent, which keeps it theme-token driven
- * and therefore correct in both themes without a JS colour lookup. Duty-free is the one
- * exception: it is a categorically different state (an agreement is in force, not merely
- * a low number), so it wears the reserved "good" status colour and ships with an icon and
- * a label, never colour alone.
+ * Counts by band, as columns. Colour comes from the SAME `tariffBands` ramp the table and
+ * the band filter use, keyed by label. It used to be stepped opacities of an accent token
+ * instead, which looked close enough but was a different set of colours - so "Elevated"
+ * here and "Elevated" three cards down were two different blues, and the reader had no
+ * reason to connect them. One rate, one colour, everywhere on the page.
+ *
+ * Duty-free stays the reserved "good" status colour with an icon and a label, because it
+ * is a categorically different state (an agreement is in force, not merely a low number).
  *
  * Columns rather than a histogram of raw rates because the question readers actually ask
  * is "how many partners get a good deal", and a count per named band answers it directly.
@@ -22,26 +28,28 @@ export interface RateBand {
 }
 
 export function TariffBands({ bands, total }: { bands: RateBand[]; total: number }) {
+  const { resolved } = useTheme();
+  const palette = tariffBands(resolved);
+  const colorFor = (label: string) =>
+    palette.find((b) => b.label === label)?.color ?? palette[palette.length - 1].color;
+
   const max = Math.max(...bands.map((b) => b.count), 1);
-  // Stepped opacities of one hue: further from the surface = higher rate.
-  const shades = ["bg-series-1/25", "bg-series-1/45", "bg-series-1/65", "bg-series-1/85", "bg-series-1"];
 
   return (
     <div>
       <div className="flex h-40 items-end gap-2">
-        {bands.map((band, i) => {
+        {bands.map((band) => {
           const pctOfTotal = total > 0 ? (band.count / total) * 100 : 0;
           return (
             <div key={band.label} className="flex h-full flex-1 flex-col justify-end gap-1.5">
-              <div className="tabular text-center text-xs font-medium text-ink">
-                {band.count}
-              </div>
+              <div className="tabular text-center text-xs font-medium text-ink">{band.count}</div>
               <div
-                className={`w-full rounded-t ${
-                  band.dutyFree ? "bg-status-good" : shades[Math.min(i - 1, shades.length - 1)]
-                }`}
-                style={{ height: `${Math.max(2, (band.count / max) * 100)}%` }}
-                title={`${band.label}: ${band.count} partners (${pctOfTotal.toFixed(0)}%)`}
+                className="w-full rounded-t transition-opacity hover:opacity-80"
+                style={{
+                  height: `${Math.max(2, (band.count / max) * 100)}%`,
+                  background: colorFor(band.label),
+                }}
+                title={`${band.label} (${band.hint}): ${band.count} partners, ${pctOfTotal.toFixed(0)}% of the schedule`}
                 role="img"
                 aria-label={`${band.label}: ${band.count} partners`}
               />

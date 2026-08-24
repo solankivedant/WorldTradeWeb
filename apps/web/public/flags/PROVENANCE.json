@@ -1,0 +1,8 @@
+{
+  "source": "flagcdn.com",
+  "license": "Public domain (the flag-icons collection, MIT-licensed packaging)",
+  "retrieved": "2026-08-24",
+  "requested": 217,
+  "onDisk": 216,
+  "note": "ISO 3166-1 alpha-2, lowercase filenames. Regenerate with scripts/fetch-flags.mjs."
+}

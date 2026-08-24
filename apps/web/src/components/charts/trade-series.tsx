@@ -23,13 +23,19 @@ export interface SeriesPoint {
 /**
  * Exports and imports over time. Two series on ONE axis - both are USD, so a second
  * y-scale would be both unnecessary and the single most common charting mistake.
+ *
+ * `reporterName` names whose trade the two lines are, matching the sector and partner
+ * lists on the same page. "Exports" alone is only unambiguous while the reader still
+ * remembers which country's page they are on.
  */
 export function TradeSeries({
   data,
+  reporterName,
   title = "Trade over time",
   subtitle,
 }: {
   data: SeriesPoint[];
+  reporterName?: string;
   title?: string;
   subtitle?: string;
 }) {
@@ -40,9 +46,11 @@ export function TradeSeries({
   const flow = flowColors(resolved);
   const S = [flow.export, flow.import];
   const INK = ink(resolved);
+  const exportLabel = reporterName ? `${reporterName} exports` : "Exports";
+  const importLabel = reporterName ? `${reporterName} imports` : "Imports";
   const legend = [
-    { color: S[0], label: "Exports" },
-    { color: S[1], label: "Imports" },
+    { color: S[0], label: exportLabel },
+    { color: S[1], label: importLabel },
   ];
 
   if (data.length < 2) {
@@ -63,8 +71,8 @@ export function TradeSeries({
       rows={data}
       columns={[
         { key: "year", label: "Year", render: (r) => r.year },
-        { key: "x", label: "Exports", align: "right", render: (r) => usdFull(r.exports) },
-        { key: "m", label: "Imports", align: "right", render: (r) => usdFull(r.imports) },
+        { key: "x", label: exportLabel, align: "right", render: (r) => usdFull(r.exports) },
+        { key: "m", label: importLabel, align: "right", render: (r) => usdFull(r.imports) },
         {
           key: "bal",
           label: "Balance",
@@ -116,12 +124,12 @@ export function TradeSeries({
                     <div className="mb-1 font-medium text-ink">{label}</div>
                     <div className="flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-sm" style={{ background: S[0] }} />
-                      <span className="text-ink-secondary">Exports</span>
+                      <span className="text-ink-secondary">{exportLabel}</span>
                       <span className="ml-auto pl-3 text-ink">{usd(point.exports)}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="h-2 w-2 rounded-sm" style={{ background: S[1] }} />
-                      <span className="text-ink-secondary">Imports</span>
+                      <span className="text-ink-secondary">{importLabel}</span>
                       <span className="ml-auto pl-3 text-ink">{usd(point.imports)}</span>
                     </div>
                     {balance !== null && (

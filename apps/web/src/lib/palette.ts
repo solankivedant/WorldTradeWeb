@@ -253,3 +253,94 @@ export function mapTheme(mode: Mode) {
         labelBg: [255, 255, 255] as [number, number, number],
       };
 }
+
+/**
+ * Tariff rate bands.
+ *
+ * Rate is a MAGNITUDE, so the ramp is ordinal: one hue, monotone lightness, stepped for
+ * its own surface (light runs pale→deep on a pale page; dark runs deep→pale on a dark
+ * one, so in both cases a higher rate sits further from the background). Both ramps clear
+ * the ordinal checks - monotone L, adjacent ΔL ≥ 0.06, light-end contrast ≥ 2:1, single
+ * hue - measured with the dataviz validator, not by eye.
+ *
+ * The steps are named bands rather than a continuous gradient. Two hundred rows of a
+ * continuous ramp asks the eye to compare hues down a page, which is the comparison
+ * people are worst at; six labelled steps let a reader say "these are the high ones"
+ * without decoding a colour.
+ *
+ * `ink` is the text colour that clears 4.5:1 on that band's fill, so a rate can be
+ * printed ON its own colour instead of only beside it. Each value was measured; do not
+ * add a band without re-measuring, because the mid-blues sit right on the boundary
+ * (#2f7fd8 clears black ink at 4.83 and would FAIL with white at 4.08).
+ *
+ * Duty-free keeps the reserved status-good colour rather than joining the ramp. It is a
+ * different kind of fact - an agreement is in force - not merely a small number, and it
+ * is the one band a reader scans for.
+ */
+export interface TariffBand {
+  /** Upper bound, exclusive. A rate belongs to the first band whose `max` it is under. */
+  max: number;
+  label: string;
+  /** The numeric range, for axis and legend hints. */
+  range: string;
+  /** Swatch, pill and bar fill. */
+  color: string;
+  /** Text colour measured to clear 4.5:1 on `color`. */
+  ink: string;
+  /** Plain-language gloss, used in tooltips. */
+  blurb: string;
+}
+
+const BLACK_INK = "#0b0b0b";
+const WHITE_INK = "#ffffff";
+
+const TARIFF_RAMP = {
+  light: ["#86b6ef", "#5598e7", "#2470c9", "#1c5cab", "#0d366b"],
+  dark: ["#1a5099", "#2f7fd8", "#5598e7", "#86b6ef", "#b7d3f6"],
+} as const;
+
+const TARIFF_INK = {
+  light: [BLACK_INK, BLACK_INK, WHITE_INK, WHITE_INK, WHITE_INK],
+  dark: [WHITE_INK, BLACK_INK, BLACK_INK, BLACK_INK, BLACK_INK],
+} as const;
+
+/**
+ * The band edges, in one place. Every surface on the tariff page - the distribution
+ * columns, the region bars, the table pills, the band filter - reads them from here.
+ * They were previously restated per surface, which is how a band can quietly mean two
+ * different things on one page.
+ */
+const TARIFF_STEPS = [
+  { max: 0.5, label: "Duty-free", range: "under 0.5%", blurb: "effectively zero - an agreement or a zero-rated schedule", dutyFree: true },
+  { max: 2.5, label: "Low", range: "0.5-2.5%", blurb: "close to open" },
+  { max: 5, label: "Moderate", range: "2.5-5%", blurb: "ordinary MFN territory" },
+  { max: 10, label: "Elevated", range: "5-10%", blurb: "a real cost on landed price" },
+  { max: 15, label: "High", range: "10-15%", blurb: "margin-eating for most goods" },
+  { max: Infinity, label: "Very high", range: "over 15%", blurb: "often protective" },
+] as const;
+
+/** Mode-free band shape, for server code that only needs edges and labels. */
+export const TARIFF_BAND_META = TARIFF_STEPS.map(({ max, label, range, blurb }) => ({
+  max,
+  label,
+  range,
+  blurb,
+  dutyFree: label === "Duty-free",
+}));
+
+export function tariffBands(mode: Mode): TariffBand[] {
+  return TARIFF_STEPS.map((step, i) => ({
+    max: step.max,
+    label: step.label,
+    range: step.range,
+    blurb: step.blurb,
+    // Duty-free sits outside the ramp; the rest take ramp slot i-1.
+    color: i === 0 ? STATUS.good : TARIFF_RAMP[mode][i - 1],
+    ink: i === 0 ? BLACK_INK : TARIFF_INK[mode][i - 1],
+  }));
+}
+
+export function tariffBandFor(rate: number, mode: Mode): TariffBand {
+  const bands = tariffBands(mode);
+  return bands.find((b) => rate < b.max) ?? bands[bands.length - 1];
+}

@@ -1,6 +1,15 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeftRight, ArrowUpRight, Percent, Repeat, Scale, ShoppingCart } from "lucide-react";
+import {
+  ArrowDownToLine,
+  ArrowLeftRight,
+  ArrowUpFromLine,
+  ArrowUpRight,
+  Percent,
+  Repeat,
+  Scale,
+  ShoppingCart,
+} from "lucide-react";
 import {
   bilateralValue,
   getCountry,
@@ -15,7 +24,8 @@ import { SectorCompare } from "@/components/charts/sector-compare";
 import { pairSectors } from "@/lib/pairing";
 import { MirrorCompare } from "@/components/charts/mirror-compare";
 import { GapTable } from "@/components/charts/gap-table";
-import { flagEmoji, pct, share, usd } from "@/lib/format";
+import { CountryFlag } from "@/components/country-flag";
+import { pct, share, usd } from "@/lib/format";
 
 export async function generateMetadata({
   params,
@@ -130,15 +140,26 @@ export default async function CorridorPage({
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
-            <Link href={`/country/${ca.iso3}`} className="hover:underline">
-              {flagEmoji(ca.iso2)} {ca.name}
+            <Link
+              href={`/country/${ca.iso3}`}
+              className="flex items-center gap-2 hover:underline"
+            >
+              <CountryFlag iso2={ca.iso2} name={ca.name} size="lg" />
+              {ca.name}
             </Link>
             <ArrowLeftRight className="h-4 w-4 text-ink-muted" aria-hidden />
-            <Link href={`/country/${cb.iso3}`} className="hover:underline">
-              {flagEmoji(cb.iso2)} {cb.name}
+            <Link
+              href={`/country/${cb.iso3}`}
+              className="flex items-center gap-2 hover:underline"
+            >
+              <CountryFlag iso2={cb.iso2} name={cb.name} size="lg" />
+              {cb.name}
             </Link>
           </h1>
-          <p className="mt-1 text-xs text-ink-muted">Bilateral trade corridor · {year}</p>
+          <p className="mt-1 text-xs text-ink-muted">
+            Bilateral trade corridor · {year} · both directions, each reported by the country
+            that sells
+          </p>
         </div>
         <Link
           href={`/corridor/${cb.iso3}/${ca.iso3}`}
@@ -151,14 +172,16 @@ export default async function CorridorPage({
 
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
-          label={`${ca.iso3} → ${cb.iso3}`}
+          icon={<ArrowUpFromLine className="h-3 w-3" aria-hidden />}
+          label={`${ca.name} sells to ${cb.name}`}
           value={usd(aExportsToB)}
-          hint={`${pct(share(aExportsToB, aTotals.x), 1)} of ${ca.iso3} exports`}
+          hint={`${ca.iso3} → ${cb.iso3} · ${pct(share(aExportsToB, aTotals.x), 1)} of all ${ca.name} exports`}
         />
         <Stat
-          label={`${cb.iso3} → ${ca.iso3}`}
+          icon={<ArrowDownToLine className="h-3 w-3" aria-hidden />}
+          label={`${cb.name} sells to ${ca.name}`}
           value={usd(bExportsToA)}
-          hint={`${pct(share(bExportsToA, bTotals.x), 1)} of ${cb.iso3} exports`}
+          hint={`${cb.iso3} → ${ca.iso3} · ${pct(share(bExportsToA, bTotals.x), 1)} of all ${cb.name} exports`}
         />
         <Stat
           icon={<Scale className="h-3 w-3" aria-hidden />}
@@ -215,7 +238,7 @@ export default async function CorridorPage({
           icon={<ShoppingCart className="h-3 w-3" aria-hidden />}
         >
           <div className="p-3">
-            <SectorCompare rows={bSectors} title="" limit={6} />
+            <SectorCompare rows={bSectors} reporterName={cb.name} title="" limit={6} />
           </div>
         </Card>
       </div>
@@ -232,14 +255,16 @@ export default async function CorridorPage({
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <SectorCompare
           rows={aSectors}
+          reporterName={ca.name}
           title={`${ca.name} trade by sector`}
-          subtitle="Exports against imports, with the world"
+          subtitle={`What ${ca.name} sells to the world against what it buys from the world`}
           limit={6}
         />
         <SectorCompare
           rows={bSectors}
+          reporterName={cb.name}
           title={`${cb.name} trade by sector`}
-          subtitle="Exports against imports, with the world"
+          subtitle={`What ${cb.name} sells to the world against what it buys from the world`}
           limit={6}
         />
       </div>

@@ -5,7 +5,8 @@ import { useState } from "react";
 import { ArrowRight, ChevronDown, Package, Percent, ShoppingCart, TrendingUp } from "lucide-react";
 import { sectorColor } from "@/lib/palette";
 import { useTheme } from "./theme";
-import { flagEmoji, pct, usd } from "@/lib/format";
+import { pct, usd } from "@/lib/format";
+import { CountryFlag } from "@/components/country-flag";
 import { EstimateTag } from "./ui";
 import type { Opportunity } from "@/lib/types";
 
@@ -79,7 +80,11 @@ export function OpportunityCard({
             </span>
           </div>
           <h3 className="mt-1.5 flex items-baseline gap-1.5 text-base font-semibold leading-tight">
-            <span aria-hidden>{flagEmoji(opportunity.destinationIso2)}</span>
+            <CountryFlag
+              iso2={opportunity.destinationIso2}
+              name={opportunity.destinationName}
+              size="md"
+            />
             <span className="truncate">{opportunity.destinationName}</span>
           </h3>
         </div>
@@ -179,23 +184,50 @@ export function OpportunityCard({
         </div>
       )}
 
+      {/* Each link names where it goes. "Corridor / Sector / Country" told the reader the
+          shape of the destination page but not which corridor, which sector or which
+          country - and on a grid of sixty cards that is the only thing that differs. */}
       <div className="mt-auto grid grid-cols-3 gap-px border-t border-hairline bg-hairline text-2xs">
-        <CardLink href={`/corridor/${originIso}/${opportunity.destination}`}>Corridor</CardLink>
-        <CardLink href={`/product/${encodeURIComponent(opportunity.sector)}`}>Sector</CardLink>
-        <CardLink href={`/country/${opportunity.destination}`}>Country</CardLink>
+        <CardLink
+          href={`/corridor/${originIso}/${opportunity.destination}`}
+          title={`${originIso} to ${opportunity.destinationName}: both directions of this corridor`}
+        >
+          {originIso} → {opportunity.destination}
+        </CardLink>
+        <CardLink
+          href={`/product/${encodeURIComponent(opportunity.sector)}`}
+          title={`The global market for ${opportunity.sectorName}`}
+        >
+          {opportunity.sectorName}
+        </CardLink>
+        <CardLink
+          href={`/country/${opportunity.destination}`}
+          title={`${opportunity.destinationName}'s full trade dashboard`}
+        >
+          {opportunity.destinationName}
+        </CardLink>
       </div>
     </article>
   );
 }
 
-function CardLink({ href, children }: { href: string; children: React.ReactNode }) {
+function CardLink({
+  href,
+  title,
+  children,
+}: {
+  href: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <Link
       href={href}
-      className="flex items-center justify-center gap-1 bg-surface px-2 py-2.5 font-medium text-series-1 transition-colors hover:bg-raised"
+      title={title}
+      className="flex min-w-0 items-center justify-center gap-1 bg-surface px-2 py-2.5 font-medium text-series-1 transition-colors hover:bg-raised"
     >
-      {children}
-      <ArrowRight className="h-3 w-3" aria-hidden />
+      <span className="truncate">{children}</span>
+      <ArrowRight className="h-3 w-3 shrink-0" aria-hidden />
     </Link>
   );
 }

@@ -30,7 +30,8 @@ import { TradeSeries } from "@/components/charts/trade-series";
 import { SectorCompare } from "@/components/charts/sector-compare";
 import { PartnerCompare } from "@/components/charts/partner-compare";
 import { pairPartners, pairSectors } from "@/lib/pairing";
-import { flagEmoji, growth, pct, share, usd } from "@/lib/format";
+import { growth, pct, share, usd } from "@/lib/format";
+import { CountryFlag } from "@/components/country-flag";
 
 export async function generateMetadata({ params }: { params: Promise<{ iso: string }> }) {
   const { iso } = await params;
@@ -94,8 +95,9 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
     return (
       <div className="mx-auto max-w-3xl p-6">
         <Crumb items={[{ label: "Map", href: "/" }, { label: country.name }]} />
-        <h1 className="mt-3 text-2xl font-semibold">
-          {flagEmoji(country.iso2)} {country.name}
+        <h1 className="mt-3 flex items-center gap-2.5 text-2xl font-semibold">
+          <CountryFlag iso2={country.iso2} name={country.name} size="lg" />
+          {country.name}
         </h1>
         <div className="card mt-6">
           <Empty
@@ -115,7 +117,7 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
-            <span aria-hidden>{flagEmoji(country.iso2)}</span>
+            <CountryFlag iso2={country.iso2} name={country.name} size="xl" />
             {country.name}
           </h1>
           <p className="mt-1 text-xs text-ink-muted">
@@ -186,14 +188,16 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <SectorCompare
           rows={sectorPairs}
+          reporterName={country.name}
           title="Trade by sector"
-          subtitle={`${year} · exports against imports · click a sector for its global market`}
+          subtitle={`${year} · what ${country.name} sells abroad against what it buys in · click a sector for its global market`}
         />
         <PartnerCompare
           rows={partners}
           originIso={country.iso3}
+          originName={country.name}
           title="Top trading partners"
-          subtitle={`${year} · both directions · click for the corridor dashboard`}
+          subtitle={`${year} · ${country.name} → partner against partner → ${country.name} · click for the corridor dashboard`}
         />
       </div>
 
@@ -201,8 +205,9 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
       <div className="mt-3">
         <TradeSeries
           data={series}
+          reporterName={country.name}
           title="Trade over time"
-          subtitle={`${series[0]?.year ?? ""}-${series[series.length - 1]?.year ?? ""} · world totals`}
+          subtitle={`${series[0]?.year ?? ""}-${series[series.length - 1]?.year ?? ""} · ${country.name} trade with the whole world`}
         />
       </div>
 

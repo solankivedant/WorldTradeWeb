@@ -15,7 +15,8 @@ import {
   Search,
   Database,
 } from "lucide-react";
-import { flagEmoji } from "@/lib/format";
+
+import { CountryFlag } from "@/components/country-flag";
 import { startRouteProgress } from "@/lib/nav-progress";
 import { SECTOR_CATALOG } from "@/lib/sectors";
 import { ThemeToggle } from "./theme";
@@ -232,7 +233,7 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
                 >
                   {hit.kind === "country" ? (
                     <>
-                      <span aria-hidden>{flagEmoji(hit.iso2)}</span>
+                      <CountryFlag iso2={hit.iso2} name={hit.name} size="sm" />
                       <span className="flex-1 truncate">{hit.name}</span>
                       <span className="tabular text-2xs text-ink-muted">{hit.iso3}</span>
                     </>

@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQueryState } from "nuqs";
-import { ArrowUpDown, Search, SlidersHorizontal } from "lucide-react";
-import { flagEmoji, pct } from "@/lib/format";
+import { ArrowUpDown, Search, X } from "lucide-react";
+import { CountryFlag } from "@/components/country-flag";
+import { useTheme } from "@/components/theme";
+import { tariffBandFor, tariffBands, type TariffBand } from "@/lib/palette";
+import { pct } from "@/lib/format";
 import { startRouteProgress } from "@/lib/nav-progress";
 
 interface Row {
@@ -18,28 +21,22 @@ interface Row {
 /**
  * Tariff rates a reporter charges each partner.
  *
- * Rate is encoded by BAR LENGTH first. A heatmap over 200 rows would make the eye compare
- * hues down the page, which is exactly the comparison people are worst at; length against
- * a shared baseline is the comparison they are best at.
+ * Rate is encoded three ways at once, deliberately. BAR LENGTH is primary: a length
+ * against a shared baseline is the comparison people are best at, where comparing hues
+ * down a 200-row page is the one they are worst at. COLOUR carries the same rate as six
+ * named bands (see `tariffBands` for the ramp and why it is banded rather than
+ * continuous), so a reader can pick out the high partners without reading a digit. And
+ * the NUMBER is printed on its own band colour, which is the part that was missing - the
+ * old table put the colour only in a 10px swatch two columns away from the rate, so
+ * nothing about the figure itself said which band it was in.
  *
- * Colour is a secondary channel and carries BANDS, not a continuous ramp - six named
- * steps of one hue, each with its band name in the row, so nothing is communicated by hue
- * alone. Duty-free keeps the reserved "good" status colour because it is a different kind
- * of fact (an agreement is in force), not merely a small number.
+ * The band scale is the filter. Clicking a swatch narrows the table to that band and
+ * clicking it again clears it, which turns the legend from a static key into the control
+ * people reach for anyway - the old separate "Band" dropdown said the same thing twice
+ * and neither copy showed what the colours actually were.
+ *
+ * Nothing is carried by hue alone: every row names its band in words and prints its rate.
  */
-
-const BANDS = [
-  { max: 0.5, label: "Duty-free", swatch: "bg-status-good" },
-  { max: 2.5, label: "Low", swatch: "bg-series-1/30" },
-  { max: 5, label: "Moderate", swatch: "bg-series-1/50" },
-  { max: 10, label: "Elevated", swatch: "bg-series-1/70" },
-  { max: 15, label: "High", swatch: "bg-series-1/85" },
-  { max: Infinity, label: "Very high", swatch: "bg-series-1" },
-] as const;
-
-function bandFor(rate: number) {
-  return BANDS.find((b) => rate < b.max) ?? BANDS[BANDS.length - 1];
-}
 
 type Sort = "rate-desc" | "rate-asc" | "name";
 
@@ -56,10 +53,23 @@ export function TariffExplorer({
   rows: Row[];
   focusPartner: string;
 }) {
+  const { resolved } = useTheme();
+  const bands = tariffBands(resolved);
+
   const [, setReporter] = useQueryState("reporter", { defaultValue: "USA", shallow: false });
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("rate-desc");
   const [band, setBand] = useState<string>("");
+
+  /** How many partners sit in each band, so the scale doubles as a distribution. */
+  const counts = useMemo(() => {
+    const tally: Record<string, number> = {};
+    for (const r of rows) {
+      const label = tariffBandFor(r.rate, resolved).label;
+      tally[label] = (tally[label] ?? 0) + 1;
+    }
+    return tally;
+  }, [rows, resolved]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -69,14 +79,14 @@ export function TariffExplorer({
         (r) => r.name.toLowerCase().includes(q) || r.iso3.toLowerCase().startsWith(q),
       );
     }
-    if (band) list = list.filter((r) => bandFor(r.rate).label === band);
+    if (band) list = list.filter((r) => tariffBandFor(r.rate, resolved).label === band);
 
     const sorted = [...list];
     if (sort === "rate-desc") sorted.sort((a, b) => b.rate - a.rate);
     else if (sort === "rate-asc") sorted.sort((a, b) => a.rate - b.rate);
     else sorted.sort((a, b) => a.name.localeCompare(b.name));
     return sorted;
-  }, [rows, query, sort, band]);
+  }, [rows, query, sort, band, resolved]);
 
   const max = Math.max(...rows.map((r) => r.rate), 1);
 
@@ -123,25 +133,6 @@ export function TariffExplorer({
 
         <label className="flex flex-col gap-1">
           <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
-            <SlidersHorizontal className="h-3 w-3" aria-hidden />
-            Band
-          </span>
-          <select
-            value={band}
-            onChange={(e) => setBand(e.target.value)}
-            className="h-9 rounded-md border border-hairline bg-plane px-2 text-sm focus:border-series-1 focus:outline-none"
-          >
-            <option value="">All bands</option>
-            {BANDS.map((b) => (
-              <option key={b.label} value={b.label}>
-                {b.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
             <ArrowUpDown className="h-3 w-3" aria-hidden />
             Sort
           </span>
@@ -162,11 +153,18 @@ export function TariffExplorer({
         </p>
       </div>
 
+      <BandScale
+        bands={bands}
+        counts={counts}
+        active={band}
+        onPick={(label) => setBand((current) => (current === label ? "" : label))}
+      />
+
       {filtered.length === 0 ? (
         <p className="p-8 text-center text-sm text-ink-muted">
           {rows.length === 0
             ? `No tariff schedule published for ${reporterName}.`
-            : `No partner matches these filters. Try a shorter search, or "All bands".`}
+            : "No partner matches these filters. Try a shorter search, or clear the band."}
         </p>
       ) : (
         <div className="max-h-[620px] overflow-auto">
@@ -195,22 +193,25 @@ export function TariffExplorer({
             </thead>
             <tbody className="tabular">
               {filtered.map((row) => {
-                const meta = bandFor(row.rate);
+                const meta = tariffBandFor(row.rate, resolved);
                 const focused = row.iso3 === focusPartner;
+                const explain = `${reporterName} charges goods from ${row.name} ${pct(row.rate, 2)} on average - ${meta.label.toLowerCase()}, ${meta.blurb}`;
                 return (
                   <tr
                     key={row.iso3}
-                    className={`border-b border-hairline/50 transition-colors last:border-0 hover:bg-raised/60 ${
+                    title={explain}
+                    className={`group border-b border-hairline/50 transition-colors last:border-0 hover:bg-raised/60 ${
                       focused ? "bg-series-1/10" : ""
                     }`}
                   >
                     <td className="px-3 py-2">
                       <Link
                         href={`/corridor/${row.iso3}/${reporter}`}
+                        title={`${row.name} exporting into ${reporterName} - open the corridor`}
                         className="flex items-center gap-2 hover:underline"
                       >
-                        <span aria-hidden>{flagEmoji(row.iso2)}</span>
-                        <span className="text-ink-secondary">{row.name}</span>
+                        <CountryFlag iso2={row.iso2} name={row.name} size="sm" />
+                        <span className="text-ink-secondary group-hover:text-ink">{row.name}</span>
                       </Link>
                     </td>
                     <td className="hidden px-3 py-2 text-ink-muted sm:table-cell">
@@ -219,21 +220,31 @@ export function TariffExplorer({
                     <td className="px-3 py-2">
                       <span className="inline-flex items-center gap-1.5 text-ink-secondary">
                         <span
-                          className={`h-2.5 w-2.5 shrink-0 rounded-sm ${meta.swatch}`}
+                          className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                          style={{ background: meta.color }}
                           aria-hidden
                         />
                         {meta.label}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-right font-medium text-ink">
-                      {pct(row.rate, 2)}
+                    <td className="px-3 py-2 text-right">
+                      {/* The figure wears its own band colour, so the rate and the colour
+                          cannot be read apart. Ink is measured against the fill - see
+                          `tariffBands`. */}
+                      <span
+                        className="inline-block min-w-[3.75rem] rounded-md px-2 py-0.5 text-right font-semibold"
+                        style={{ background: meta.color, color: meta.ink }}
+                      >
+                        {pct(row.rate, 2)}
+                      </span>
                     </td>
                     <td className="px-3 py-2">
-                      <div className="h-2 w-full overflow-hidden rounded-sm bg-raised">
+                      <div className="h-2.5 w-full overflow-hidden rounded-sm bg-raised">
                         <div
-                          className={`h-full rounded-sm ${meta.swatch}`}
+                          className="h-full rounded-sm transition-[width] duration-200"
                           style={{
                             width: `${Math.max((row.rate / max) * 100, row.rate > 0 ? 1.5 : 0)}%`,
+                            background: meta.color,
                           }}
                         />
                       </div>
@@ -244,6 +255,71 @@ export function TariffExplorer({
             </tbody>
           </table>
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The band key, doubling as the band filter and as a distribution of the schedule.
+ *
+ * Each step shows how many partners fall in it, which answers "is this a low-tariff
+ * country?" before any row is read - a schedule with 140 duty-free partners and one at
+ * 30% looks completely different from one spread evenly, and the table alone hides that.
+ */
+function BandScale({
+  bands,
+  counts,
+  active,
+  onPick,
+}: {
+  bands: TariffBand[];
+  counts: Record<string, number>;
+  active: string;
+  onPick: (label: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 border-b border-hairline bg-plane/40 px-3 py-2">
+      <span className="mr-1 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
+        Rate band
+      </span>
+      {bands.map((b) => {
+        const n = counts[b.label] ?? 0;
+        const on = active === b.label;
+        return (
+          <button
+            key={b.label}
+            type="button"
+            onClick={() => onPick(b.label)}
+            disabled={n === 0 && !on}
+            aria-pressed={on}
+            title={`${b.label} - ${b.blurb}. ${n} partner${n === 1 ? "" : "s"}.`}
+            className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-2xs transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+              on
+                ? "border-transparent text-ink"
+                : "border-hairline text-ink-secondary hover:bg-raised"
+            }`}
+            style={on ? { background: b.color, color: b.ink, borderColor: b.color } : undefined}
+          >
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-sm ring-1 ring-inset ring-black/10"
+              style={{ background: b.color }}
+              aria-hidden
+            />
+            {b.label}
+            <span className="tabular opacity-70">{n}</span>
+          </button>
+        );
+      })}
+      {active && (
+        <button
+          type="button"
+          onClick={() => onPick(active)}
+          className="flex items-center gap-1 rounded-md px-1.5 py-1 text-2xs text-ink-muted hover:text-ink"
+        >
+          <X className="h-3 w-3" aria-hidden />
+          Clear
+        </button>
       )}
     </div>
   );
