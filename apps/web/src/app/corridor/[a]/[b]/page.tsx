@@ -18,6 +18,7 @@ import {
   productsFor,
   provenance,
   tariffApplied,
+  tariffYear,
   totalsFor,
 } from "@/lib/data";
 import { Card, Crumb, Empty, EstimateTag, ProvenanceBar, Stat, Warn } from "@/components/ui";
@@ -53,6 +54,7 @@ export default async function CorridorPage({
   if (!ca || !cb || ca.iso3 === cb.iso3) notFound();
 
   const year = latestYear();
+  const rateYear = tariffYear();
 
   // Both sides of both directions. A's reported exports to B and B's reported imports
   // from A describe the same physical trade and routinely disagree - that gap is data,
@@ -261,6 +263,9 @@ export default async function CorridorPage({
             />
           </div>
           <p className="px-4 py-3 text-2xs leading-relaxed text-ink-muted">
+            {rateYear === null
+              ? "Rates carry no recorded year in this build."
+              : `Rates are for ${rateYear}, the newest year the source publishes - not current-day rates.`}{" "}
             Simple averages of effectively applied rates across all products. A product
             you actually ship may face a very different rate, and a preferential rate
             under a trade agreement usually requires meeting rules of origin.

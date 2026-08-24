@@ -25,7 +25,7 @@ import argparse
 import json
 import math
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -162,6 +162,16 @@ def build(vintage: str) -> dict:
     if not wits_dir.exists():
         raise SystemExit(f"no raw WITS drop at {wits_dir}")
 
+    # What year THIS vintage asked the tariff endpoint for. Read from the vintage's own
+    # sidecar rather than from the connector's current constant: a vintage fetched months
+    # ago must be validated against the year it was actually fetched with, not against
+    # whatever the connector happens to say today. `latest_tariff_year` postdates the
+    # trade/tariff split, so vintages fetched before it fall back to the shared year.
+    raw_meta_path = wits_dir / "_meta.json"
+    raw_meta = json.loads(raw_meta_path.read_text(encoding="utf-8")) if raw_meta_path.exists() else {}
+    raw_years = raw_meta.get("years", {})
+    tariff_year_requested = raw_years.get("latest_tariff_year", raw_years.get("latest_detail_year"))
+
     countries_raw = json.loads((RAW / "worldbank" / "countries.json").read_text(encoding="utf-8"))
     indicators = json.loads((RAW / "worldbank" / "indicators.json").read_text(encoding="utf-8"))
 
@@ -185,6 +195,12 @@ def build(vintage: str) -> dict:
     bilateral: list[dict] = []
     products: dict[str, dict[str, list]] = {}
     tariffs: dict[str, dict[str, float]] = {}
+    # The year the tariff rows actually CARRY, counted per reporter rather than assumed
+    # from the year the connector asked for. Trade and tariffs are separate WITS datasets
+    # on separate release cycles, so the tariff vintage has to be read out of the tariff
+    # data - inheriting the trade frontier is how a rate gets published under the wrong
+    # year without anything failing.
+    tariff_years: Counter[str] = Counter()
     # reporter -> flow -> partner -> {sector index: USD}. Indexes rather than codes
     # because the sector string would otherwise be repeated a few hundred thousand times
     # in the published file, which roughly triples it for no information.
@@ -363,6 +379,7 @@ def build(vintage: str) -> dict:
                     print(f"  ! implausible tariff {reporter}->{partner}: {rate}", file=sys.stderr)
                     continue
                 rates[partner] = rate
+                tariff_years[str(row.get("YEAR", ""))] += 1
             if rates:
                 tariffs[reporter] = rates
 
@@ -468,6 +485,12 @@ def build(vintage: str) -> dict:
         "mirror": mirror,
         "products": products,
         "tariffs": tariffs,
+        # Sole tariff year if every row agrees, else None - `validate` refuses a mixed
+        # vintage rather than picking one, because there is no honest way to label a
+        # table whose rows come from different years.
+        "tariff_year": int(next(iter(tariff_years))) if len(tariff_years) == 1 else None,
+        "tariff_years_seen": dict(tariff_years),
+        "tariff_year_requested": tariff_year_requested,
         "context": context,
         "stats": stats,
         "reconcile_failures": [],
@@ -485,6 +508,29 @@ def validate(data: dict) -> list[str]:
 
     if data["stats"]["bilateral_rows"] < 10_000:
         problems.append(f"only {data['stats']['bilateral_rows']} bilateral rows -- fetch likely incomplete")
+
+    # Vintage is part of a figure's identity, so a tariff table that cannot name its own
+    # year is not publishable. Two ways it fails: no year at all, or rows from more than
+    # one year mixed together - which would happen if a future WITS response widened a
+    # single-year request to the nearest available year for some reporters and not others.
+    if data["tariffs"]:
+        if data["tariff_year"] is None:
+            problems.append(
+                "tariff rows carry more than one year "
+                f"{data['tariff_years_seen']} -- refusing to publish a table that cannot "
+                "state its own vintage"
+            )
+        elif (
+            data["tariff_year_requested"] is not None
+            and data["tariff_year"] != data["tariff_year_requested"]
+        ):
+            problems.append(
+                f"tariffs came back as {data['tariff_year']} but this vintage requested "
+                f"{data['tariff_year_requested']} -- the source substituted a different "
+                "year; fix TARIFF_LATEST in the connector and refetch into a NEW vintage "
+                "(the fetcher skips files already on disk, so reusing this one changes "
+                "nothing)"
+            )
 
     # A mirror figure assembled from one or two partners is not an estimate, it is a
     # rumour. Anything that thin should not be published as a country total.
@@ -656,6 +702,9 @@ def publish(data: dict, vintage: str) -> None:
         "vintage": vintage,
         "built_at": datetime.now(timezone.utc).isoformat(),
         "latest_year": latest_year,
+        # Read from the tariff rows, never inherited from `latest_year`. The two are
+        # separate WITS datasets and are free to sit at different years.
+        "tariff_year": data["tariff_year"],
         "sources": [
             {
                 "name": "World Bank WITS",

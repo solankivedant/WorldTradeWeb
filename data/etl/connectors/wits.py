@@ -79,6 +79,25 @@ YEAR_FROM = 2010
 YEAR_TO = 2023
 LATEST = 2023
 
+# The tariff frontier is tracked SEPARATELY from the trade frontier.
+#
+# `tradestats-trade` and `tradestats-tariff` are different datasets on different release
+# cycles: trade flows follow national customs data through UN Comtrade, while applied
+# rates come from TRAINS. They happen to sit at the same year today, and pinning tariffs
+# to `LATEST` hid that they need not - a single constant cannot express "flows reach 2023
+# but rates only reach 2022", which is exactly what the 2026-08-22 raw vintage contains.
+#
+# Re-verified live on 2026-08-24 against `tradestats-tariff`:
+#   - year/2020;2026 for usa, chn, ind, deu, vnm, bra, ken -> 2020-2023 only
+#   - year/2024, year/2025, year/2026 -> HTTP 404 for every reporter tried
+#     (usa, ind, jpn, gbr, aus, zaf, mex, idn, tur, can, kor, are)
+# There is no 2024+ applied-rate data in WITS to fetch. It does not exist yet.
+#
+# Asking for a year WITS does have returns that year exactly - a single-year request is
+# not silently widened to the nearest available year - so the build can and does assert
+# that what came back is what was asked for.
+TARIFF_LATEST = 2023
+
 TIMEOUT = 60
 MAX_RETRIES = 3
 WORKERS = 6
@@ -141,7 +160,7 @@ def jobs_for(reporter: str) -> list[tuple[str, str]]:
         # bilateral jobs above, so these two dominate both fetch time and disk.
         ("bilateral_sector_export", _url("tradestats-trade", r, str(LATEST), "all", "all", "XPRT-TRD-VL")),
         ("bilateral_sector_import", _url("tradestats-trade", r, str(LATEST), "all", "all", "MPRT-TRD-VL")),
-        ("tariffs", _url("tradestats-tariff", r, str(LATEST), "all", "total", "AHS-SMPL-AVRG")),
+        ("tariffs", _url("tradestats-tariff", r, str(TARIFF_LATEST), "all", "total", "AHS-SMPL-AVRG")),
     ]
 
 
@@ -234,7 +253,14 @@ def main() -> None:
                     "MPRT-TRD-VL": "Import trade value, thousands USD",
                     "AHS-SMPL-AVRG": "Effectively applied tariff, simple average, percent",
                 },
-                "years": {"from": YEAR_FROM, "to": YEAR_TO, "latest_detail_year": LATEST},
+                "years": {
+                    "from": YEAR_FROM,
+                    "to": YEAR_TO,
+                    "latest_detail_year": LATEST,
+                    # Recorded separately so a sidecar says which year the rates in
+                    # this vintage were REQUESTED for, independent of the flows.
+                    "latest_tariff_year": TARIFF_LATEST,
+                },
                 "reporters_requested": len(reporters),
                 "retrieved_at": started.isoformat(),
                 "completed_at": datetime.now(timezone.utc).isoformat(),

@@ -11,6 +11,7 @@ import {
   Globe2,
   Landmark,
   Package,
+  Percent,
   Ruler,
   ScrollText,
   Share2,
@@ -26,6 +27,8 @@ interface FullMeta {
   vintage: string;
   built_at: string;
   latest_year: number;
+  /** Read from the tariff rows at build time. Null for a build predating that. */
+  tariff_year?: number | null;
   sources: { name: string; url: string; license: string; datasets?: string[] }[];
   units: Record<string, string>;
   caveats: string[];
@@ -170,6 +173,23 @@ export default function DataPage() {
           label="Detail year"
           value={String(meta.latest_year)}
           hint="the year sector and partner detail is drawn from"
+        />
+        {/*
+          Its own fact, beside the trade year rather than folded into it. Flows and applied
+          rates are separate WITS datasets on separate release cycles; they agree in this
+          vintage, and this is the place that would show it if they ever stopped.
+        */}
+        <Fact
+          icon={<Percent className="h-3.5 w-3.5" aria-hidden />}
+          label="Tariff year"
+          value={meta.tariff_year ? String(meta.tariff_year) : "not recorded"}
+          hint={
+            meta.tariff_year
+              ? meta.tariff_year === meta.latest_year
+                ? "applied rates, same year as the trade detail in this build"
+                : "applied rates - a DIFFERENT year from the trade detail above"
+              : "this build predates the separate tariff vintage"
+          }
         />
       </section>
 

@@ -74,6 +74,15 @@ interface Meta {
   vintage: string;
   built_at: string;
   latest_year: number;
+  /**
+   * The year the TARIFF rows carry, read from the tariff data at build time.
+   *
+   * Separate from `latest_year` because trade flows and applied rates are separate WITS
+   * datasets on separate release cycles. They sit at the same year today; the field
+   * exists so the day they diverge is a visible fact rather than a silent mislabelling.
+   * Null for a build predating the split.
+   */
+  tariff_year: number | null;
   sources: { name: string; url: string; license: string }[];
   units: Record<string, string>;
   caveats: string[];
@@ -195,6 +204,7 @@ export function dataset(): Dataset {
     vintage: "unbuilt",
     built_at: "",
     latest_year: 0,
+    tariff_year: null,
     sources: [],
     units: {},
     caveats: ["Dataset has not been built. Run: python -m data.etl.pipelines.build"],
@@ -300,6 +310,18 @@ export function provenance(): Provenance {
 
 export function latestYear(): number {
   return dataset().meta.latest_year || 2022;
+}
+
+/**
+ * The year the published tariff rates are for.
+ *
+ * Callers showing a tariff must use this rather than `latestYear()`. Borrowing the trade
+ * frontier works only for as long as the two datasets happen to agree, and the moment
+ * WITS moves one and not the other every rate on the site would be captioned with a year
+ * it does not belong to. Null means the build did not record one - say so, do not guess.
+ */
+export function tariffYear(): number | null {
+  return dataset().meta.tariff_year ?? null;
 }
 
 export function getCountry(iso3: string): Country | undefined {

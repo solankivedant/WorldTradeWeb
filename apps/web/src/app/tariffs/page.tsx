@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { allCountries, avgTariff, dataset, getCountry, latestYear, provenance } from "@/lib/data";
+import { allCountries, avgTariff, dataset, getCountry, provenance, tariffYear } from "@/lib/data";
 import { TariffExplorer } from "@/components/tariff-explorer";
 import { TariffBands, type RateBand } from "@/components/charts/tariff-bands";
 import { TariffRegions, type RegionRate } from "@/components/charts/tariff-regions";
 import {
   ArrowUpRight,
   BookOpen,
+  CalendarClock,
   CircleCheck,
   Gauge,
   Percent,
@@ -39,7 +40,9 @@ export default async function TariffsPage({
   const focusPartner = sp.partner?.toUpperCase() ?? "";
 
   const country = getCountry(reporter);
-  const year = latestYear();
+  // The tariff year, NOT the trade frontier. They agree today; captioning rates with
+  // `latestYear()` would silently mislabel every one of them the day they stop agreeing.
+  const rateYear = tariffYear();
   const rates = dataset().tariffs[reporter] ?? {};
 
   const rows = Object.entries(rates)
@@ -103,6 +106,25 @@ export default async function TariffsPage({
         <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ink-secondary">
           What {country?.name ?? reporter} charges its trading partners, as an effectively
           applied simple average across all products.
+        </p>
+        {/*
+          The vintage sits with the rates, not only in the provenance strip at the foot of
+          the page. A tariff is the figure on this site most likely to be read as "current"
+          - schedules change mid-year and 2024-26 saw a great deal of change - so the year
+          these rates belong to has to be visible without scrolling.
+        */}
+        <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-ink-muted">
+          <CalendarClock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {rateYear === null ? (
+            <span>The build did not record which year these rates are for.</span>
+          ) : (
+            <span>
+              Rates are for{" "}
+              <span className="tabular font-medium text-ink-secondary">{rateYear}</span>, the
+              newest year the source publishes. They are not current-day rates and will not
+              reflect any schedule change since.
+            </span>
+          )}
         </p>
       </div>
 
@@ -243,7 +265,10 @@ export default async function TariffsPage({
       </div>
 
       <div className="card mt-3 overflow-hidden">
-        <ProvenanceBar meta={provenance()} extra={`${country?.name ?? reporter} · ${year}`} />
+        <ProvenanceBar
+          meta={provenance()}
+          extra={`${country?.name ?? reporter} · applied rates ${rateYear ?? "year not recorded"}`}
+        />
       </div>
     </div>
   );
