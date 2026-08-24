@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Crumb, Warn } from "@/components/ui";
 
-export const metadata = { title: "Data & methodology - WorldTradeWeb" };
+export const metadata = { title: "Source - WorldTradeWeb" };
 
 interface FullMeta {
   vintage: string;
@@ -62,6 +62,11 @@ const STAT_LABELS: Record<string, { label: string; hint: string; icon: React.Rea
     label: "Bilateral flows",
     hint: "country-to-country rows published",
     icon: <Share2 className="h-3.5 w-3.5" aria-hidden />,
+  },
+  bilateral_sector_rows: {
+    label: "Corridor-sector slices",
+    hint: "one country pair, one sector, one direction",
+    icon: <Boxes className="h-3.5 w-3.5" aria-hidden />,
   },
   no_data_files: {
     label: "Empty responses",
@@ -124,7 +129,7 @@ export default function DataPage() {
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-5 lg:px-6">
-      <Crumb items={[{ label: "Map", href: "/" }, { label: "Data" }]} />
+      <Crumb items={[{ label: "Map", href: "/" }, { label: "Source" }]} />
 
       <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold tracking-tight">
         <Database className="h-5 w-5 text-ink-muted" aria-hidden />

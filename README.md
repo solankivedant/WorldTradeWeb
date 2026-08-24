@@ -33,7 +33,8 @@ The dataset is already built in `data/processed/` — if you just want to run th
 | `/product/[code]` | Global market for one sector: top exporters and importers, supply concentration |
 | `/tariffs` | What a country charges every partner, sortable and searchable |
 | `/opportunities` | Scored export opportunities, each showing its full arithmetic |
-| `/about/data` | Sources, units, pipeline stages, build statistics, known limitations |
+| `/explore` | World trade explorer - every sector at once, a filterable corridor list, and any two connections side by side |
+| `/source` | Sources, units, pipeline stages, build statistics, known limitations |
 
 Every filter lives in the URL, so any view you can reach is a permalink - including the
 selected country and the metric. Light and dark themes both ship, toggled from the header;
@@ -41,7 +42,7 @@ every surface follows it, not just the map.
 
 Country outlines use the Natural Earth **India point-of-view** edition, so Jammu & Kashmir
 including Gilgit-Baltistan and Aksai Chin is drawn as Indian territory. The reasoning and
-the factual note are on `/about/data`.
+the factual note are on `/source`.
 
 ## Stack
 
@@ -98,7 +99,7 @@ nuisance:
   unverifiable assertion.
 
 See [.claude/rules/data-integrity.md](.claude/rules/data-integrity.md) for the rules this
-follows, and [/about/data](http://localhost:3000/about/data) in the running app for the
+follows, and [/source](http://localhost:3000/source) in the running app for the
 live provenance record.
 
 ## Not yet built

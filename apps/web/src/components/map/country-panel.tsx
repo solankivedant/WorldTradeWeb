@@ -7,6 +7,7 @@ import {
   ArrowUpRight,
   ExternalLink,
   GripHorizontal,
+  Layers,
   Lightbulb,
   Scale,
   Trophy,
@@ -17,7 +18,7 @@ import { CompareBar, CompareLegend } from "@/components/charts/compare-bar";
 import { useTheme } from "@/components/theme";
 import { growth, usd } from "@/lib/format";
 import { CountryFlag } from "@/components/country-flag";
-import type { CountryDetail } from "./types";
+import type { CountryDetail, PartnerValue } from "./types";
 
 const PANEL_W = 340;
 const MARGIN = 12;
@@ -111,6 +112,7 @@ export function CountryPanel({
   const balance =
     detail.exports !== null && detail.imports !== null ? detail.exports - detail.imports : null;
   const exportGrowth = growth(detail.exports, detail.prevExports);
+  const lens = detail.sectorFilter;
   // One scale across every sector row and both sides, so bar length is comparable.
   const sectorMax = Math.max(
     ...detail.sectors.map((s) => Math.max(s.exports ?? 0, s.imports ?? 0)),
@@ -152,18 +154,29 @@ export function CountryPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto">
+        {/* Under a sector lens every figure below narrows to it, so the panel says so
+            once at the top rather than qualifying each number. */}
+        {lens && (
+          <div className="flex items-center gap-1.5 border-b border-hairline bg-series-1/10 px-3 py-1.5 text-2xs text-ink-secondary">
+            <Layers className="h-3 w-3 shrink-0 text-series-1" aria-hidden />
+            <span className="truncate">
+              Showing <span className="font-medium text-ink">{lens.name}</span> only
+            </span>
+          </div>
+        )}
+
         {/* ---- headline figures ---- */}
         <div className="grid grid-cols-2 gap-px bg-hairline">
           <Metric
             icon={<ArrowUpRight className="h-3 w-3" aria-hidden />}
-            label="Exports"
+            label={lens ? `Exports · ${lens.name}` : "Exports"}
             value={usd(detail.exports)}
             color={colors.export}
             delta={exportGrowth}
           />
           <Metric
             icon={<ArrowDownLeft className="h-3 w-3" aria-hidden />}
-            label="Imports"
+            label={lens ? `Imports · ${lens.name}` : "Imports"}
             value={usd(detail.imports)}
             color={colors.import}
             delta={growth(detail.imports, detail.prevImports)}
@@ -173,7 +186,7 @@ export function CountryPanel({
         <div className="flex items-center gap-3 border-b border-hairline px-3 py-2 text-2xs">
           <span className="flex items-center gap-1 text-ink-muted">
             <Scale className="h-3 w-3" aria-hidden />
-            Balance
+            {lens ? `Balance · ${lens.name}` : "Balance"}
           </span>
           <span
             className={`tabular font-medium ${
@@ -192,7 +205,7 @@ export function CountryPanel({
 
         {/* ---- sector mix, both directions on one centre line ---- */}
         {detail.sectors.length > 0 && (
-          <Section title="Trade by sector">
+          <Section title={lens ? "Trade by sector · full mix" : "Trade by sector"}>
             <CompareLegend
               className="mb-2"
               exportLabel={`${detail.name} sells`}
@@ -200,9 +213,25 @@ export function CountryPanel({
             />
             <ul className="space-y-2">
               {detail.sectors.map((s) => (
-                <li key={s.code}>
+                // The full mix stays visible under a lens - it is the context that makes
+                // the filtered figure mean something - but the chosen sector is marked so
+                // the two readings cannot be confused for each other.
+                <li
+                  key={s.code}
+                  className={
+                    lens?.code === s.code ? "-mx-1.5 rounded-md bg-series-1/10 px-1.5 py-1" : ""
+                  }
+                >
                   <div className="flex items-baseline justify-between gap-2 text-2xs">
-                    <span className="min-w-0 flex-1 truncate text-ink-secondary">{s.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-ink-secondary">
+                      {lens?.code === s.code && (
+                        <Layers
+                          className="mr-1 inline h-2.5 w-2.5 shrink-0 text-series-1"
+                          aria-hidden
+                        />
+                      )}
+                      {s.name}
+                    </span>
                     {s.net !== null && (
                       <span
                         className="tabular shrink-0"
@@ -340,7 +369,7 @@ function PartnerBlock({
   heading: string;
   icon: React.ReactNode;
   color: string;
-  rows: { iso: string; v: number }[];
+  rows: PartnerValue[];
   total: number;
   iso: string;
   names: Record<string, string>;
@@ -379,9 +408,12 @@ function PartnerBlock({
                   : `/corridor/${row.iso}/${iso}`
               }
               title={
-                direction === "out"
+                (direction === "out"
                   ? `${reporterName} exports ${usd(row.v)} to ${names[row.iso] ?? row.iso}`
-                  : `${names[row.iso] ?? row.iso} exports ${usd(row.v)} to ${reporterName}`
+                  : `${names[row.iso] ?? row.iso} exports ${usd(row.v)} to ${reporterName}`) +
+                (row.src === "importer"
+                  ? ` - ${names[row.iso] ?? row.iso} publishes no export figures, so this is ${reporterName}'s own customs record of the same goods`
+                  : "")
               }
               className="flex items-center gap-1.5 rounded-md px-1 py-1 text-2xs transition-colors hover:bg-raised"
             >
@@ -393,6 +425,14 @@ function PartnerBlock({
               <span className="min-w-0 flex-1 truncate text-ink-secondary">
                 {names[row.iso] ?? row.iso}
               </span>
+              {row.src === "importer" && (
+                <span
+                  className="shrink-0 rounded-sm border border-hairline px-1 text-[9px] uppercase leading-[1.4] text-ink-muted"
+                  aria-label="figure from the buyer's own customs record"
+                >
+                  buyer
+                </span>
+              )}
               <span className="tabular shrink-0 text-ink">{usd(row.v, 0)}</span>
             </Link>
           </li>

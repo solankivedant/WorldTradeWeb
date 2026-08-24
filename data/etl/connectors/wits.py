@@ -17,6 +17,10 @@ WHAT THIS SOURCE ACTUALLY GIVES YOU (verified against live responses, not docs):
     means we cannot do HS-6 drill-down from this source; that needs Comtrade.
   - `partner/all` returns ~231 partners in one response, so bilateral data costs one
     request per reporter, not one per pair.
+  - `partner/all` and `product/all` COMBINE in a single request: one call returns the
+    full partner x product cross-product (verified live for `ind`/2023 -- 234 partners
+    x 29 product codes = 6,081 series in ~540KB). That is what makes corridor-level
+    sector detail affordable: two more requests per reporter, not 29 more.
   - A year range (`2010;2022`) returns every year in between, so a full time series
     is also one request.
   - Some reporters return HTTP 200 with zero series. That is "does not report", not an
@@ -115,7 +119,14 @@ def fetch(url: str) -> dict | None:
 
 
 def jobs_for(reporter: str) -> list[tuple[str, str]]:
-    """The seven requests that fully describe one reporter country."""
+    """The nine requests that fully describe one reporter country.
+
+    The two `bilateral_sector_*` jobs are what let the product carry sector detail at
+    CORRIDOR level rather than only at country level. Without them the warehouse can say
+    what India exports in fuels and what India exports to China, but not what India
+    exports to China in fuels -- which is the question every corridor screen actually
+    gets asked.
+    """
     r = ISO3_TO_WITS.get(reporter.upper(), reporter.lower())
     span = f"{YEAR_FROM};{YEAR_TO}"
     return [
@@ -126,12 +137,25 @@ def jobs_for(reporter: str) -> list[tuple[str, str]]:
         ("bilateral_import", _url("tradestats-trade", r, str(LATEST), "all", "total", "MPRT-TRD-VL")),
         ("products_export", _url("tradestats-trade", r, str(LATEST), "wld", "all", "XPRT-TRD-VL")),
         ("products_import", _url("tradestats-trade", r, str(LATEST), "wld", "all", "MPRT-TRD-VL")),
+        # partner x product in one call each. Roughly 40x the payload of the `total`
+        # bilateral jobs above, so these two dominate both fetch time and disk.
+        ("bilateral_sector_export", _url("tradestats-trade", r, str(LATEST), "all", "all", "XPRT-TRD-VL")),
+        ("bilateral_sector_import", _url("tradestats-trade", r, str(LATEST), "all", "all", "MPRT-TRD-VL")),
         ("tariffs", _url("tradestats-tariff", r, str(LATEST), "all", "total", "AHS-SMPL-AVRG")),
     ]
 
 
 def fetch_reporter(reporter: str, out_dir: Path) -> dict:
-    """Fetch all seven datasets for one reporter. Resumable: skips files already on disk."""
+    """Fetch all nine datasets for one reporter. Resumable: skips files already on disk.
+
+    Resumability is also how a NEW job is added to an existing vintage. The two
+    `bilateral_sector_*` jobs were added after the 2026-08-22-r2 drop had been fetched;
+    re-running against that same vintage pulls only the two missing files per reporter
+    and leaves the other seven untouched, so every figure already published keeps the
+    exact bytes it was derived from. That is the opposite of the year case -- bumping
+    YEAR_TO needs a NEW vintage directory, because the filenames do not encode the year
+    and the skip would silently keep the old year's data.
+    """
     dest = out_dir / reporter
     dest.mkdir(parents=True, exist_ok=True)
     result = {"reporter": reporter, "ok": [], "empty": [], "failed": []}
@@ -204,6 +228,7 @@ def main() -> None:
                 "source": "World Bank WITS",
                 "datasources": ["tradestats-trade", "tradestats-tariff"],
                 "base_url": BASE,
+                "jobs_per_reporter": [name for name, _ in jobs_for("USA")],
                 "indicators": {
                     "XPRT-TRD-VL": "Export trade value, thousands USD",
                     "MPRT-TRD-VL": "Import trade value, thousands USD",

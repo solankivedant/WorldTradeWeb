@@ -111,6 +111,10 @@ interface Props {
   metric: MapMetric;
   focusIso: string | null;
   onFocusChange: (iso3: string | null) => void;
+  /** Clicking an arc opens the connection panel. Null clears it. */
+  onConnectionChange: (partnerIso: string | null) => void;
+  /** The corridor currently open in the panel, so its arc can be drawn lit. */
+  activeConnection: string | null;
 }
 
 export function TradeMap({
@@ -120,6 +124,8 @@ export function TradeMap({
   metric,
   focusIso,
   onFocusChange,
+  onConnectionChange,
+  activeConnection,
 }: Props) {
   const mapRef = useRef<MapRef>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -245,8 +251,13 @@ export function TradeMap({
     if (flows.length) {
       const maxFlow = Math.max(...flows.map((f) => f.v), 1);
 
+      // Hot = hovered, or belonging to the corridor whose panel is open. Both directions
+      // of the open corridor light up, because the panel describes both of them.
       const isHot = (d: Flow) =>
-        flowHover !== null && flowHover.flow.partner === d.partner && flowHover.flow.dir === d.dir;
+        (flowHover !== null &&
+          flowHover.flow.partner === d.partner &&
+          flowHover.flow.dir === d.dir) ||
+        d.partner === activeConnection;
 
       /**
        * Exports and imports to the SAME partner run along the same great circle, so left
@@ -314,7 +325,7 @@ export function TradeMap({
           updateTriggers: {
             getSourceColor: [resolved],
             getTargetColor: [resolved],
-            getWidth: [flows, flowHover],
+            getWidth: [flows, flowHover, activeConnection],
           },
         }),
       );
@@ -344,9 +355,9 @@ export function TradeMap({
           greatCircle: true,
           pickable: true,
           updateTriggers: {
-            getSourceColor: [resolved, flowHover],
+            getSourceColor: [resolved, flowHover, activeConnection],
             getTargetColor: [resolved],
-            getWidth: [flows, flowHover],
+            getWidth: [flows, flowHover, activeConnection],
           },
         }),
       );
@@ -390,7 +401,7 @@ export function TradeMap({
             getColor: [resolved],
             getAngle: [flows],
             getPixelOffset: [flows],
-            getSize: [flowHover],
+            getSize: [flowHover, activeConnection],
           },
         }),
       );
@@ -450,6 +461,8 @@ export function TradeMap({
     resolved,
     theme,
     flowColor,
+    flowHover,
+    activeConnection,
   ]);
 
   const onHoverPick = useCallback((info: PickingInfo) => {
@@ -467,23 +480,38 @@ export function TradeMap({
 
   const onClick = useCallback(
     (info: PickingInfo) => {
+      // An arc, or its value label, opens that corridor rather than changing the
+      // selection. Picking the country underneath instead would swap the whole map out
+      // from under a reader who was aiming at a line drawn on top of it.
+      if (info.layer?.id === "flows" || info.layer?.id === "flow-values") {
+        const flow = info.object as Flow | undefined;
+        if (flow) {
+          onConnectionChange(flow.partner === activeConnection ? null : flow.partner);
+          return;
+        }
+      }
       const iso3 = (info.object as GeoJSON.Feature | undefined)?.properties?.iso3 as
         | string
         | undefined;
       // Clicking a country selects it; clicking it again, or clicking empty ocean, clears.
+      // Either way the open corridor no longer belongs to what is selected, so it goes.
+      onConnectionChange(null);
       onFocusChange(iso3 && iso3 !== focusIso ? iso3 : null);
     },
-    [onFocusChange, focusIso],
+    [onFocusChange, focusIso, onConnectionChange, activeConnection],
   );
 
+  // Escape unwinds one layer at a time. With a corridor open it closes that (the
+  // connection panel owns that key), and only a second press clears the selection -
+  // otherwise one keypress would dismiss both and the reader loses their place.
   useEffect(() => {
-    if (!focusIso) return;
+    if (!focusIso || activeConnection) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onFocusChange(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [focusIso, onFocusChange]);
+  }, [focusIso, onFocusChange, activeConnection]);
 
   const hoverPair = hoveredIso ? payload.pairs[hoveredIso] : undefined;
 
@@ -631,7 +659,7 @@ export function TradeMap({
       {flowHover && (
         <div
           className="pointer-events-none absolute z-20 rounded-lg border border-hairline bg-surface px-3 py-2 text-xs shadow-xl"
-          style={tipStyle(flowHover.x, flowHover.y, 230, 62)}
+          style={tipStyle(flowHover.x, flowHover.y, 236, flowHover.flow.src === "importer" ? 98 : 78)}
           role="status"
         >
           <div className="flex items-center gap-1.5 font-medium text-ink">
@@ -647,6 +675,13 @@ export function TradeMap({
             {countryNames[flowHover.flow.partner] ?? flowHover.flow.partner}
           </div>
           <div className="tabular mt-0.5 text-ink-secondary">{usd(flowHover.flow.v)} a year</div>
+          {flowHover.flow.src === "importer" && (
+            <div className="mt-1 border-t border-hairline pt-1 text-2xs leading-snug text-ink-muted">
+              {countryNames[flowHover.flow.partner] ?? flowHover.flow.partner} publishes no
+              export figures. This is the buyer&apos;s own customs record.
+            </div>
+          )}
+          <div className="mt-1 text-2xs text-ink-muted">Click to open this connection</div>
         </div>
       )}
     </div>

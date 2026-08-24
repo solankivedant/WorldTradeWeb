@@ -15,7 +15,7 @@
  * respectively. The default Natural Earth edition draws the de-facto lines instead. Both
  * renderings are widely published; which one a product ships is a jurisdiction and
  * audience decision, not a factual one, and every major mapping provider varies it the
- * same way. `/about/data` carries this note for readers.
+ * same way. `/source` carries this note for readers.
  *
  * Taking the WHOLE country set from one POV edition — rather than patching India's
  * polygon into a default-edition base — is deliberate. Patching leaves Pakistan and China

@@ -28,7 +28,7 @@ Covers product/UX design and system design. Visual specifics stay directional un
 /tariffs                   Tariff explorer
 /opportunities             Opportunity engine
 /compare                   Side-by-side (countries or products)
-/about/data                Sources, methodology, caveats
+/source                    Sources, methodology, caveats
 ```
 
 All view state lives in URL params — `?year=2024&hs=8703&flow=export&mode=arcs` — so every screen is shareable and back/forward works.

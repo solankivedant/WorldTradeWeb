@@ -96,6 +96,11 @@ SECTOR_LABELS = {
     "90-99_Miscellan": "Miscellaneous",
 }
 
+# Position of each sector in the published `codes` array. Fixed by SECTOR_LABELS' own
+# insertion order, so the index is stable as long as that dict is only appended to -
+# reordering it would silently relabel every corridor-sector figure already published.
+SECTOR_INDEX = {code: i for i, code in enumerate(SECTOR_LABELS)}
+
 
 # ---------------------------------------------------------------- normalize
 
@@ -180,6 +185,10 @@ def build(vintage: str) -> dict:
     bilateral: list[dict] = []
     products: dict[str, dict[str, list]] = {}
     tariffs: dict[str, dict[str, float]] = {}
+    # reporter -> flow -> partner -> {sector index: USD}. Indexes rather than codes
+    # because the sector string would otherwise be repeated a few hundred thousand times
+    # in the published file, which roughly triples it for no information.
+    bilateral_sectors: dict[str, dict[str, dict[str, list]]] = {}
 
     stats = {
         "reporters_seen": 0,
@@ -187,6 +196,7 @@ def build(vintage: str) -> dict:
         "partners_dropped_aggregate": 0,
         "partners_dropped_territory": 0,
         "bilateral_rows": 0,
+        "bilateral_sector_rows": 0,
         "no_data_files": 0,
         "products_dropped_other_scheme": 0,
     }
@@ -247,6 +257,66 @@ def build(vintage: str) -> dict:
                     }
                 )
                 had_data = True
+
+        # --- bilateral BY SECTOR, latest year ---
+        #
+        # Same partner allowlist as the bilateral totals above, and the same PRODUCTCODE
+        # allowlist as the product composition below. Both filters are load-bearing here
+        # for the same reasons they are there: `partner/all` carries ~30 aggregate
+        # pseudo-countries, and `product/all` mixes three overlapping classification
+        # schemes, so an unfiltered sum over this response overstates a corridor several
+        # times over.
+        #
+        # These rows are NOT reconciled against the corridor totals from
+        # `bilateral_export.json`. WITS computes the two aggregations separately and they
+        # disagree for some reporters, exactly as the country-level and sector-level
+        # totals already do (DOM, GUY). Publishing both and letting the UI show the gap is
+        # the standing rule; silently scaling one to match the other would invent data.
+        sector_entry: dict[str, dict[str, list]] = {}
+        for flow, fname in (
+            ("x", "bilateral_sector_export.json"),
+            ("m", "bilateral_sector_import.json"),
+        ):
+            payload = read_raw(reporter_dir / fname)
+            if payload is None or payload.get("_no_data"):
+                if payload is not None:
+                    stats["no_data_files"] += 1
+                continue
+            by_partner: dict[str, dict[int, float]] = defaultdict(dict)
+            for row in parse_sdmx(payload):
+                code = row.get("PRODUCTCODE", "")
+                if code not in SECTOR_INDEX:
+                    stats["products_dropped_other_scheme"] += 1
+                    continue
+                partner = row.get("PARTNER", "").upper()
+                partner = LEGACY_ISO3.get(partner, partner)
+                if partner in NON_COUNTRY_PARTNERS:
+                    stats["partners_dropped_aggregate"] += 1
+                    dropped_codes[partner] += 1
+                    continue
+                if partner not in valid_iso:
+                    stats["partners_dropped_territory"] += 1
+                    dropped_codes[partner] += 1
+                    continue
+                value = row["VALUE"] * THOUSANDS_TO_USD
+                if value <= 0:
+                    # A reported zero carries no corridor-sector information and would
+                    # cost as much to publish as a real figure. Absent stays absent.
+                    continue
+                by_partner[partner][SECTOR_INDEX[code]] = value
+            if by_partner:
+                packed = {
+                    partner: sorted(
+                        ([idx, round(v, 1)] for idx, v in slices.items()),
+                        key=lambda pair: -pair[1],
+                    )
+                    for partner, slices in by_partner.items()
+                }
+                sector_entry[flow] = packed
+                stats["bilateral_sector_rows"] += sum(len(v) for v in packed.values())
+                had_data = True
+        if sector_entry:
+            bilateral_sectors[reporter] = sector_entry
 
         # --- product composition, latest year ---
         prod_entry: dict[str, list] = {}
@@ -316,6 +386,7 @@ def build(vintage: str) -> dict:
         "countries": countries,
         "totals": totals,
         "bilateral": bilateral,
+        "bilateral_sectors": bilateral_sectors,
         "products": products,
         "tariffs": tariffs,
         "context": context,
@@ -335,6 +406,36 @@ def validate(data: dict) -> list[str]:
 
     if data["stats"]["bilateral_rows"] < 10_000:
         problems.append(f"only {data['stats']['bilateral_rows']} bilateral rows -- fetch likely incomplete")
+
+    if data["stats"]["bilateral_sector_rows"] < 100_000:
+        problems.append(
+            f"only {data['stats']['bilateral_sector_rows']} corridor-sector rows -- "
+            "the bilateral_sector_* fetch is likely incomplete"
+        )
+
+    # A corridor's sector slices should land near its reported total. WITS aggregates the
+    # two separately so they will not match exactly; an order-of-magnitude gap means the
+    # product allowlist let an overlapping scheme through, which is the failure that
+    # overstated India 3.4x the first time.
+    totals_by_corridor = {
+        (row["r"], row["p"], row["f"]): row["v"] for row in data["bilateral"]
+    }
+    checked = overshoot = 0
+    for reporter, flows in data["bilateral_sectors"].items():
+        for flow, partners in flows.items():
+            for partner, slices in partners.items():
+                total = totals_by_corridor.get((reporter, partner, flow))
+                if not total or total <= 0:
+                    continue
+                checked += 1
+                if sum(v for _, v in slices) > total * 1.5:
+                    overshoot += 1
+    if checked and overshoot / checked > 0.02:
+        problems.append(
+            f"{overshoot}/{checked} corridors have sector slices summing >150% of their "
+            "reported total -- the PRODUCTCODE allowlist is probably letting a parallel "
+            "classification scheme through"
+        )
 
     for iso, years in data["totals"].items():
         for year, flows in years.items():
@@ -425,6 +526,13 @@ def publish(data: dict, vintage: str) -> None:
     write("countries.json", list(data["countries"].values()))
     write("totals.json", data["totals"])
     write("bilateral.json", data["bilateral"])
+    # `codes` travels WITH the data rather than being implied by a shared constant. The
+    # payload is index-encoded, so a reader that resolved indexes against its own copy of
+    # the catalogue would mislabel every figure the moment the two drifted apart.
+    write(
+        "bilateral_sectors.json",
+        {"codes": list(SECTOR_LABELS), "flows": data["bilateral_sectors"]},
+    )
     write("products.json", data["products"])
     write("tariffs.json", data["tariffs"])
     write("context.json", data["context"])
@@ -454,6 +562,7 @@ def publish(data: dict, vintage: str) -> None:
         "caveats": [
             "WITS product groups are HS-section aggregates, not HS-6 lines. HS-6 drill-down requires UN Comtrade.",
             "Bilateral detail covers the latest complete year only; time series are world-total.",
+            "Corridor-level sector figures come from a separate WITS aggregation than corridor totals, so a corridor's sector slices do not always sum exactly to its reported total. Neither is adjusted to fit the other.",
             "Reported exports from A to B routinely differ from B's reported imports from A (CIF/FOB valuation, timing, transshipment). Both figures are shown where available rather than reconciled.",
             "Re-export hubs (Singapore, Netherlands, Hong Kong, UAE) report transit volumes as their own trade.",
             "Tariff figures are simple averages across products and hide wide dispersion within a partner relationship.",

@@ -3,13 +3,18 @@ import {
   allCountries,
   dataset,
   diversificationHHI,
+  flowPartners,
   exportRank,
   getCountry,
+  hasSectorDetail,
   latestYear,
   productsFor,
   provenance,
+  sectorPartners,
   totalsFor,
 } from "@/lib/data";
+import type { PartnerValue } from "@/lib/data";
+import { sectorName } from "@/lib/sectors";
 
 export const dynamic = "force-dynamic";
 
@@ -155,19 +160,32 @@ export async function GET(request: NextRequest) {
   let detail: unknown = null;
 
   if (selected) {
-    const { bilateral, byIso } = dataset();
-    const exports: { iso: string; v: number }[] = [];
-    const imports: { iso: string; v: number }[] = [];
+    const { byIso } = dataset();
+    let exports: PartnerValue[] = [];
+    let imports: PartnerValue[] = [];
+    let exportCount = 0;
+    let importCount = 0;
 
-    for (const row of bilateral) {
-      if (row.y !== year || row.f !== "x") continue;
-      // Both directions taken from the EXPORTER's own report, so the two sides are
-      // measured the same way rather than one being a mirror of the other.
-      if (row.r === focus) exports.push({ iso: row.p, v: row.v });
-      else if (row.p === focus) imports.push({ iso: row.r, v: row.v });
+    if (sector && hasSectorDetail()) {
+      // Sector lens: the arcs, the labels and the partner lists all narrow to ONE sector.
+      // A filter that repaints the choropleth but leaves the flows showing total trade
+      // says two different things on one screen, and the flows are the loudest of the
+      // two - a reader picking "Fuels" and seeing India's machinery corridors reasonably
+      // concludes the filter is broken.
+      //
+      // Both sides still come from the exporter's own books, same as the unfiltered case.
+      const narrowed = sectorPartners(focus, sector, 60);
+      exports = narrowed.exports;
+      imports = narrowed.imports;
+      exportCount = narrowed.exportCount;
+      importCount = narrowed.importCount;
+    } else {
+      const all = flowPartners(focus, year, 60);
+      exports = all.exports;
+      imports = all.imports;
+      exportCount = all.exportCount;
+      importCount = all.importCount;
     }
-    exports.sort((a, b) => b.v - a.v);
-    imports.sort((a, b) => b.v - a.v);
 
     const flows: {
       from: [number, number];
@@ -177,9 +195,10 @@ export async function GET(request: NextRequest) {
       v: number;
       dir: "export" | "import";
       partner: string;
+      src: "exporter" | "importer";
     }[] = [];
 
-    const addFlows = (rows: { iso: string; v: number }[], dir: "export" | "import") => {
+    const addFlows = (rows: PartnerValue[], dir: "export" | "import") => {
       rows.slice(0, FLOWS_PER_DIRECTION).forEach((row, i) => {
         const partner = byIso.get(row.iso);
         if (!partner?.lat || !partner?.lon || !selected.lat || !selected.lon) return;
@@ -206,6 +225,7 @@ export async function GET(request: NextRequest) {
           v: row.v,
           dir,
           partner: row.iso,
+          src: row.src,
         });
       });
     };
@@ -253,22 +273,31 @@ export async function GET(request: NextRequest) {
           row.exports !== null && row.imports !== null ? row.exports - row.imports : null,
       }));
 
+    // Under a sector lens the headline pair has to narrow with everything else. Leaving
+    // it at the country total would put "$431B exports" above a list of fuel corridors
+    // adding to $89B, and the reader has no way to tell which number the filter applies
+    // to. Year-on-year is dropped rather than faked: the product cube is latest-year
+    // only, so there is no prior-year sector figure to compare against.
+    const lens = sector ? sectorMap.get(sector) : undefined;
+    const filtered = Boolean(sector && hasSectorDetail());
+
     detail = {
       iso3: selected.iso3,
       iso2: selected.iso2,
       name: selected.name,
       region: selected.region,
-      exports: totals.x ?? null,
-      imports: totals.m ?? null,
-      prevExports: prev.x ?? null,
-      prevImports: prev.m ?? null,
-      rank: exportRank(focus, year),
+      exports: filtered ? (lens?.exports ?? null) : (totals.x ?? null),
+      imports: filtered ? (lens?.imports ?? null) : (totals.m ?? null),
+      prevExports: filtered ? null : (prev.x ?? null),
+      prevImports: filtered ? null : (prev.m ?? null),
+      rank: filtered ? null : exportRank(focus, year),
       hhi: diversificationHHI(focus),
       sectors,
+      sectorFilter: filtered ? { code: sector, name: sectorName(sector) } : null,
       topExports: exports.slice(0, 6),
       topImports: imports.slice(0, 6),
-      exportPartnerCount: exports.length,
-      importPartnerCount: imports.length,
+      exportPartnerCount: exportCount,
+      importPartnerCount: importCount,
       flows,
     };
   }

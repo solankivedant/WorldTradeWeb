@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   ArrowLeftRight,
+  Compass,
   Globe2,
   Lightbulb,
   Loader2,
@@ -33,9 +34,10 @@ type Hit =
 
 const NAV = [
   { href: "/", label: "Map", Icon: MapIcon },
+  { href: "/explore", label: "Explore", Icon: Compass },
   { href: "/opportunities", label: "Opportunities", Icon: Lightbulb },
   { href: "/tariffs", label: "Tariffs", Icon: Percent },
-  { href: "/about/data", label: "Data", Icon: Database },
+  { href: "/source", label: "Source", Icon: Database },
 ];
 
 /**

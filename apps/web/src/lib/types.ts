@@ -36,6 +36,45 @@ export interface ProductRow {
   value: number;
 }
 
+/** One sector's slice of one direction of one corridor. */
+export interface CorridorSectorRow {
+  code: string;
+  name: string;
+  value: number;
+}
+
+/**
+ * Whose books a figure came from.
+ *
+ * `exporter` is the seller's own report and the default. `importer` means the seller
+ * publishes nothing at all - Russia, Iran and about thirty others - and this is the
+ * buyer's customs record of the same goods. A different measurement basis, so it is
+ * labelled wherever it appears rather than blended in silently.
+ */
+export type FigureSource = "exporter" | "importer";
+
+/** One sector, summed across every corridor on earth. */
+export interface SectorOverview {
+  code: string;
+  name: string;
+  worldTrade: number;
+  corridors: number;
+  exporters: number;
+  importers: number;
+  /** Herfindahl-Hirschman over exporter shares, 0-10000. High = few sellers dominate. */
+  hhi: number | null;
+  topExporter: { iso: string; value: number } | null;
+  topImporter: { iso: string; value: number } | null;
+}
+
+/** One directed corridor in a ranked list. */
+export interface CorridorRow {
+  reporter: string;
+  partner: string;
+  value: number;
+  src: FigureSource;
+}
+
 export interface Provenance {
   source: string;
   vintage: string;

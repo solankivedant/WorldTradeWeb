@@ -10,11 +10,19 @@ export interface Flow {
   v: number;
   dir: FlowDirection;
   partner: string;
+  src: "exporter" | "importer";
 }
 
 export interface PartnerValue {
   iso: string;
   v: number;
+  /**
+   * Whose books this figure came from. `exporter` is the seller's own report and the
+   * default; `importer` means the seller publishes nothing at all (Russia, Iran and
+   * about thirty others) and this is the buyer's customs record of the same goods.
+   * A different measurement basis, so it is labelled rather than blended in silently.
+   */
+  src: "exporter" | "importer";
 }
 
 export interface SectorSlice {
@@ -38,6 +46,8 @@ export interface CountryDetail {
   rank: number | null;
   hhi: number | null;
   sectors: SectorSlice[];
+  /** Set when the map's sector lens is active. Every figure above is narrowed to it. */
+  sectorFilter: { code: string; name: string } | null;
   topExports: PartnerValue[];
   topImports: PartnerValue[];
   exportPartnerCount: number;
@@ -60,4 +70,39 @@ export interface MapPayload {
   floor: number;
   reportingCountries: number;
   detail: CountryDetail | null;
+}
+
+/** One corridor, as the connection panel receives it from `/api/corridor`. */
+export interface ConnectionSector {
+  code: string;
+  name: string;
+  /** A's reported exports to B in this sector. */
+  aToB: number | null;
+  /** B's reported exports to A in this sector. */
+  bToA: number | null;
+  net: number | null;
+}
+
+export interface ConnectionDetail {
+  year: number;
+  a: { iso3: string; iso2: string | null; name: string };
+  b: { iso3: string; iso2: string | null; name: string };
+  aToB: number | null;
+  bToA: number | null;
+  /** B's reported imports from A - the mirror of aToB. Shown, never averaged in. */
+  aToBMirror: number | null;
+  bToAMirror: number | null;
+  mirrorGapPct: number | null;
+  balanceForA: number | null;
+  aShareOfAExports: number | null;
+  bShareOfBExports: number | null;
+  tariffBOnA: number | null;
+  tariffAOnB: number | null;
+  sectors: ConnectionSector[];
+  /** Everything below the shown rows, summed so the bars still cover the whole corridor. */
+  other: { count: number; aToB: number; bToA: number } | null;
+  hasSectorDetail: boolean;
+  /** Sides whose figures came from the buyer, because the seller publishes nothing. */
+  buyerSourced: { aToB: boolean; bToA: boolean };
+  focusSector: string | null;
 }

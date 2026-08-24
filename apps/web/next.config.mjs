@@ -45,6 +45,12 @@ const nextConfig = {
   outputFileTracingIncludes: {
     "/**": ["data/processed/*.json"],
   },
+
+  // The provenance page moved from /about/data to /source. Permanent, because the old
+  // path was linkable from the footer and from anything anyone bookmarked.
+  async redirects() {
+    return [{ source: "/about/data", destination: "/source", permanent: true }];
+  },
 };
 
 export default nextConfig;

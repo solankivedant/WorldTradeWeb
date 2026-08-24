@@ -49,17 +49,18 @@ figures from World Bank WITS.
 
 | Route | What it does |
 |---|---|
-| `/` | Full-bleed map: choropleth, continuous world wrap, metric switch in the header, year scrubber + legends in the footer. Selecting a country draws its directional flows and opens a floating draggable panel |
+| `/` | Full-bleed map: choropleth, continuous world wrap, metric switch in the header, year scrubber + legends in the footer. Selecting a country draws its directional flows and opens a floating draggable panel; clicking a flow opens a docked connection panel for that corridor |
+| `/explore` | World trade explorer - all 16 sectors at once, a filterable corridor list, and any two connections side by side |
 | `/country/[iso]` | Trade by sector and top partners, each showing **both directions on one row** |
 | `/country/[iso]` | KPI row, sector mix, top partners, 13-year series, tariff/concentration/openness |
 | `/corridor/[a]/[b]` | Both directions, **mirror-flow comparison**, corridor tariffs, sector overlap |
 | `/product/[code]` | Global market for one HS section group — top exporters/importers, HHI |
 | `/tariffs` | Applied rates a country charges every partner, sortable and searchable |
 | `/opportunities` | Rule-based scoring with a full per-card score breakdown |
-| `/about/data` | Sources, units, pipeline stages, build stats, reconciliation warnings |
+| `/source` | Sources, units, pipeline stages, build stats, reconciliation warnings |
 
-Real coverage: **190 reporting countries · 47,241 bilateral flows · 16 HS sector groups ·
-2010-2023 · ~20,600 tariff pairs.** Country totals match published reality (China $3,380B,
+Real coverage: **190 reporting countries · 47,241 bilateral flows · 435,626 corridor-sector
+slices · 16 HS sector groups · 2010-2023 · ~20,600 tariff pairs.** Country totals match published reality (China $3,380B,
 USA $2,019B, Germany $1,726B, India $431B for 2023).
 
 2023 is the newest year WITS publishes. The frontier moves one year at a time and sits
@@ -109,6 +110,39 @@ exported from a `"use client"` module cannot be called from the server.
 reorders a list depending on which direction you happen to be looking at, which is the
 split-view problem in another form. And `net` stays null unless both sides are reported -
 half a comparison is not a comparison.
+
+**Trade is measured at three grains, and they are different aggregations.** Country totals
+(`totals.json`), corridor totals (`bilateral.json`), and corridor-by-sector
+(`bilateral_sectors.json`, 435k slices) all come from separate WITS aggregations. They
+mostly agree - India-China sector slices sum to the corridor total exactly - but nothing in
+the pipeline scales one to fit another, and a screen that shows two grains at once should
+say which is which. `/explore` reads corridor totals with no sector selected and the sector
+cube with one, and says so on the page.
+
+`bilateral_sectors.json` is index-encoded (`codes` array plus `[sectorIndex, usd]` pairs)
+because the sector string would otherwise repeat 435,000 times and roughly triple the file.
+`codes` ships INSIDE that file: resolve indexes against it, never against `SECTOR_CATALOG`,
+or a drift between the two silently relabels every figure. Fetching it costs two extra
+requests per reporter (`partner/all` and `product/all` combine in one WITS call), and those
+two jobs were added to the EXISTING raw vintage rather than a new one - the fetcher's skip
+behaviour meant every already-published figure kept the exact bytes it was derived from.
+
+**About thirty economies file no export report at all, and Russia is one of them.** Any
+list built purely from sellers' books therefore has holes shaped like those countries, and
+the hole is invisible - the corridor simply is not there, which reads as "no trade" rather
+than "nobody published it". Russia is India's largest fuel supplier at $58.7B and was
+absent from every flow list until this was fixed. So: prefer the seller's own report, fall
+back to the buyer's customs record ONLY for sellers that publish nothing, never for a
+reporting country that merely omits one corridor, and label every fallen-back row `BUYER`.
+`nonReporters` in `lib/data.ts` is the set; `PartnerValue.src` and `CorridorRow.src` carry
+the provenance to the UI. A mirror gap is meaningless on a fallen-back corridor - there is
+only one source - so it is null rather than 0%.
+
+**The sector lens narrows the flows, not just the choropleth.** A filter that repaints the
+map but leaves the arcs showing total trade says two different things on one screen, and
+the arcs are the louder of the two. When `?sector=` is set the arcs, the labels, the partner
+lists AND the panel's headline pair all narrow to it; year-on-year is dropped rather than
+faked, because the product cube is latest-year only.
 
 **Direction is never left to colour and a legend.** A ten-row partner list scrolls its
 legend off screen by row eight, and on a partner row there are two countries so a bare
@@ -309,7 +343,7 @@ codebase, and each one silently produced plausible-looking wrong numbers.
   set comes from that one edition, never patched into a default-edition base, because
   patching leaves neighbours drawing their own version of the same ground and the disputed
   area flickers by draw order. Rationale and the factual note live in
-  `data/etl/pipelines/geo.mjs` and on `/about/data`.
+  `data/etl/pipelines/geo.mjs` and on `/source`.
 
 ## Working agreements
 

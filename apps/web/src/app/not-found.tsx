@@ -19,7 +19,7 @@ export default function NotFound() {
           Back to the map
         </Link>
         <Link
-          href="/about/data"
+          href="/source"
           className="rounded-md border border-hairline px-3 py-1.5 text-xs text-ink-secondary hover:text-ink"
         >
           What data is covered
