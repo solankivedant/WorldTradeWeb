@@ -18,6 +18,7 @@ import {
 } from "@/lib/data";
 import { Crumb, ProvenanceBar, Stat } from "@/components/ui";
 import { ExploreControls, CorridorComparePicker } from "@/components/explore-controls";
+import { ExploreTabs } from "@/components/explore-tabs";
 import { SectorWorldTable } from "@/components/charts/sector-world-table";
 import { CorridorTable } from "@/components/charts/corridor-table";
 import {
@@ -71,7 +72,7 @@ export default async function ExplorePage({
   const meta = provenance();
 
   const countries = allCountries()
-    .map((c) => ({ iso3: c.iso3, name: c.name }))
+    .map((c) => ({ iso3: c.iso3, iso2: c.iso2, name: c.name }))
     .sort((a, b) => a.name.localeCompare(b.name));
   const names = Object.fromEntries(allCountries().map((c) => [c.iso3, c.name]));
   const iso2 = Object.fromEntries(allCountries().map((c) => [c.iso3, c.iso2]));
@@ -118,8 +119,9 @@ export default async function ExplorePage({
       </h1>
       <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-ink-secondary">
         Every sector and every connection at once, with no country selected first. Narrow
-        it by sector, by a country at either end, by region or by size - or put any two
-        connections side by side further down.
+        it by sector, by a country at either end, by region or by size, then move between
+        the three panes below - and send any connection you find straight into the
+        comparison.
       </p>
 
       <div className="mt-4">
@@ -174,98 +176,107 @@ export default async function ExplorePage({
         />
       </div>
 
-      {/* ---- all sectors, irrespective of connection ---- */}
-      <div className="mt-3">
-        <SectorWorldTable rows={overview} />
-      </div>
+      {/*
+        Three panes, one filtered result set. Each subtree is rendered HERE, on the server,
+        and handed to a client shell that only decides which is on screen - so switching
+        panes never refetches anything, and the 435k-slice cube never leaves this process.
+      */}
+      <div className="mt-4">
+        <ExploreTabs
+          counts={{ sectors: overview.length, connections: matched }}
+          sectors={
+            <div className="space-y-3">
+              <SectorWorldTable rows={overview} />
 
-      {/* ---- the filtered corridor list ---- */}
-      <div className="mt-3">
-        <CorridorTable
-          rows={corridors}
-          total={matched}
-          names={names}
-          iso2={iso2}
-          sectorName={chosen?.name ?? null}
+              {/* Who trades the chosen sector. Only meaningful once one is chosen. */}
+              {chosen && ranking.length > 0 && (
+                <PartnerCompare
+                  rows={ranking}
+                  variant="country"
+                  title={`Who trades ${chosen.name.toLowerCase()}`}
+                  subtitle={`${year} · each country's own selling against its own buying, ranked by the two combined`}
+                  limit={14}
+                />
+              )}
+
+              <div className="card p-4">
+                <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
+                  What the sector figures measure
+                </h2>
+                <div className="mt-2 space-y-2 text-xs leading-relaxed text-ink-secondary">
+                  <p>
+                    Each sector total is the sum of every corridor in that sector, taken
+                    from the seller&apos;s own report. Around thirty economies - Russia
+                    among them - publish no export figures at all; for those the
+                    buyer&apos;s customs record stands in, and any row using it says so.
+                  </p>
+                  <p>
+                    Sector groups are HS section aggregates, not HS-6 lines. They are
+                    stable across HS revisions, which is why a figure here can be compared
+                    year to year, but they cannot be drilled into a specific product.
+                  </p>
+                </div>
+              </div>
+            </div>
+          }
+          connections={
+            <div className="space-y-3">
+              <CorridorTable
+                rows={corridors}
+                total={matched}
+                names={names}
+                iso2={iso2}
+                sectorName={chosen?.name ?? null}
+              />
+
+              <div className="card p-4">
+                <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
+                  Why totals here differ from a country page
+                </h2>
+                <div className="mt-2 space-y-2 text-xs leading-relaxed text-ink-secondary">
+                  <p>
+                    WITS computes corridor totals and corridor-by-sector separately, and
+                    the two aggregations do not always agree. Nothing on this page is
+                    scaled to make them match - with no sector selected the list reads
+                    corridor totals, and with one selected it reads the sector cube.
+                  </p>
+                  <p>
+                    A country page reports what that country itself declares. Here a
+                    connection is attributed to whoever sold the goods, so the same trade
+                    can appear under a different number on the two screens. Both are real;{" "}
+                    <Link href="/source" className="text-series-1 hover:underline">
+                      the source page
+                    </Link>{" "}
+                    sets out which is which.
+                  </p>
+                </div>
+              </div>
+            </div>
+          }
+          compare={
+            <section>
+              <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+                <ArrowLeftRight className="h-4 w-4 text-ink-muted" aria-hidden />
+                Compare two connections
+              </h2>
+              <p className="mt-1 max-w-3xl text-xs leading-relaxed text-ink-muted">
+                Both cards share one scale, so a bar is the same length for the same value
+                in either of them. Pick the two here, or hit &quot;Compare&quot; on any row
+                in the connections pane to send it straight into a slot. Sector splits come
+                from each seller&apos;s own report; where a country publishes nothing, its
+                side comes from the other country&apos;s customs record and is labelled.
+              </p>
+
+              <div className="card mt-3 p-3">
+                <CorridorComparePicker countries={countries} />
+              </div>
+
+              <div className="mt-3">
+                <ConnectionCompare left={left} right={right} />
+              </div>
+            </section>
+          }
         />
-      </div>
-
-      {/* ---- who trades the chosen sector ---- */}
-      {chosen && ranking.length > 0 && (
-        <div className="mt-3">
-          <PartnerCompare
-            rows={ranking}
-            variant="country"
-            title={`Who trades ${chosen.name.toLowerCase()}`}
-            subtitle={`${year} · each country's own selling against its own buying, ranked by the two combined`}
-            limit={14}
-          />
-        </div>
-      )}
-
-      {/* ---- connection against connection ---- */}
-      <section className="mt-5">
-        <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-          <ArrowLeftRight className="h-4 w-4 text-ink-muted" aria-hidden />
-          Compare two connections
-        </h2>
-        <p className="mt-1 max-w-3xl text-xs leading-relaxed text-ink-muted">
-          Both cards share one scale, so a bar is the same length for the same value in
-          either of them. Sector splits come from each seller&apos;s own report; where a
-          country publishes nothing, its side comes from the other country&apos;s customs
-          record and is labelled.
-        </p>
-
-        <div className="card mt-3 p-3">
-          <CorridorComparePicker countries={countries} />
-        </div>
-
-        <div className="mt-3">
-          <ConnectionCompare left={left} right={right} />
-        </div>
-      </section>
-
-      <div className="mt-5 grid gap-3 lg:grid-cols-2">
-        <div className="card p-4">
-          <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
-            What the sector figures measure
-          </h2>
-          <div className="mt-2 space-y-2 text-xs leading-relaxed text-ink-secondary">
-            <p>
-              Each sector total is the sum of every corridor in that sector, taken from
-              the seller&apos;s own report. Around thirty economies - Russia among them -
-              publish no export figures at all; for those the buyer&apos;s customs record
-              stands in, and any row using it says so.
-            </p>
-            <p>
-              Sector groups are HS section aggregates, not HS-6 lines. They are stable
-              across HS revisions, which is why a figure here can be compared year to
-              year, but they cannot be drilled into a specific product.
-            </p>
-          </div>
-        </div>
-        <div className="card p-4">
-          <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
-            Why totals here differ from a country page
-          </h2>
-          <div className="mt-2 space-y-2 text-xs leading-relaxed text-ink-secondary">
-            <p>
-              WITS computes corridor totals and corridor-by-sector separately, and the two
-              aggregations do not always agree. Nothing on this page is scaled to make
-              them match - with no sector selected the list reads corridor totals, and
-              with one selected it reads the sector cube.
-            </p>
-            <p>
-              A country page reports what that country itself declares. Here a connection
-              is attributed to whoever sold the goods, so the same trade can appear under
-              a different number on the two screens. Both are real;{" "}
-              <Link href="/source" className="text-series-1 hover:underline">
-                the source page
-              </Link>{" "}
-              sets out which is which.
-            </p>
-          </div>
-        </div>
       </div>
 
       <div className="mt-4">

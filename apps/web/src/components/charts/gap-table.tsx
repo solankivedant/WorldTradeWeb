@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ChartFrame } from "./chart-frame";
 import { sectorColor } from "@/lib/palette";
+import { SectorIcon } from "@/components/sector-icon";
 import { useTheme } from "@/components/theme";
 import { pct, usd, usdFull } from "@/lib/format";
 import type { GapRow } from "@/lib/types";
@@ -99,11 +100,7 @@ export function GapTable({
                     href={`/product/${encodeURIComponent(row.code)}`}
                     className="flex items-center gap-2 hover:underline"
                   >
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-sm"
-                      style={{ background: sectorColor(row.code, resolved) }}
-                      aria-hidden
-                    />
+                    <SectorIcon code={row.code} className="h-3.5 w-3.5" />
                     <span className="text-ink-secondary">{row.name}</span>
                   </Link>
                 </td>

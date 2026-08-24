@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import {
   bilateralValue,
+  corridorSectors,
   getCountry,
   latestYear,
   productsFor,
@@ -21,7 +22,8 @@ import {
 } from "@/lib/data";
 import { Card, Crumb, Empty, EstimateTag, ProvenanceBar, Stat, Warn } from "@/components/ui";
 import { SectorCompare } from "@/components/charts/sector-compare";
-import { pairSectors } from "@/lib/pairing";
+import { leadingSectors, pairSectors } from "@/lib/pairing";
+import { TopSectors } from "@/components/top-sectors";
 import { MirrorCompare } from "@/components/charts/mirror-compare";
 import { GapTable } from "@/components/charts/gap-table";
 import { CountryFlag } from "@/components/country-flag";
@@ -105,6 +107,20 @@ export default async function CorridorPage({
   // large importer of the same sector, which is the normal case for manufactured goods.
   const aSectors = pairSectors(aProducts, productsFor(ca.iso3, "m"));
   const bSectors = pairSectors(bProducts, bImportProducts);
+
+  /**
+   * What actually moves along THIS corridor, per direction.
+   *
+   * Read from the corridor-by-sector cube, not from either country's world mix. Those are
+   * different questions and they routinely give different answers: India's largest export
+   * to the world is refined fuel, but its largest export to China is chemicals. The page
+   * showed both countries' world mixes and never once said what the corridor itself
+   * carries, which is the thing a reader opened a corridor page to find out.
+   */
+  const corridorLeading = leadingSectors(
+    corridorSectors(ca.iso3, cb.iso3, "x"),
+    corridorSectors(cb.iso3, ca.iso3, "x"),
+  );
 
   // Gap analysis: sectors B imports heavily from the world, where A is a capable
   // exporter. This is the corridor-level version of the opportunity engine's core rule.
@@ -194,6 +210,24 @@ export default async function CorridorPage({
           label={`Tariff ${cb.iso3} charges ${ca.iso3}`}
           value={tariffBonA === null ? "-" : pct(tariffBonA)}
           hint={tariffBonA === null ? "not published" : "effectively applied, avg"}
+        />
+      </div>
+
+      {/* ---- what this corridor actually carries, each way ---- */}
+      <div className="mt-3">
+        <TopSectors
+          exports={corridorLeading.exports}
+          imports={corridorLeading.imports}
+          reporterName={ca.name}
+          title={`What moves between ${ca.name} and ${cb.name}`}
+          // "sells most" alone would be read as selling to the world. On a corridor both
+          // ends have to be named on every side.
+          exportHeading={`${ca.name} sells ${cb.name} most`}
+          importHeading={`${cb.name} sells ${ca.name} most`}
+          shareOf={{
+            exports: `this direction of the corridor`,
+            imports: `this direction of the corridor`,
+          }}
         />
       </div>
 

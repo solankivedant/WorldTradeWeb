@@ -9,6 +9,7 @@ import type { Provenance } from "@/lib/types";
 import type { MapMetric, MapPayload } from "./types";
 import { CountryPanel } from "./country-panel";
 import { ConnectionPanel } from "./connection-panel";
+import { SectorIcon } from "@/components/sector-icon";
 import { MapFooter } from "./map-footer";
 
 // deck.gl touches window/WebGL at module scope, so the map cannot server-render.
@@ -120,7 +121,13 @@ export function MapExplorer({
 
         {/* ---- floating sector filter ---- */}
         <div className="floating pointer-events-auto absolute right-3 top-3 z-20 flex items-center gap-2 px-2.5 py-1.5">
-          <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-ink-muted" aria-hidden />
+          {/* The lens swaps its own glyph in once a sector is chosen, so the control
+              states what it is filtering to without the reader opening it. */}
+          {sector ? (
+            <SectorIcon code={sector} className="h-3.5 w-3.5" />
+          ) : (
+            <SlidersHorizontal className="h-3.5 w-3.5 shrink-0 text-ink-muted" aria-hidden />
+          )}
           <select
             value={sector}
             onChange={(e) => setSector(e.target.value)}
@@ -128,9 +135,11 @@ export function MapExplorer({
             className="cursor-pointer bg-transparent text-xs text-ink focus:outline-none"
           >
             <option value="">All sectors</option>
+            {/* The chapters ride along in the option itself: "Stone & glass" alone does
+                not tell a reader the lens they are about to apply covers gold. */}
             {SECTOR_CATALOG.map((s) => (
-              <option key={s.code} value={s.code}>
-                {s.name}
+              <option key={s.code} value={s.code} title={s.covers}>
+                {s.name} (HS {s.hs})
               </option>
             ))}
           </select>

@@ -307,6 +307,7 @@ export function findOpportunities(query: OpportunityQuery): OpportunityScan {
         destination: destination.iso3,
         destinationName: destination.name,
         destinationIso2: destination.iso2,
+        destinationRegion: destination.region?.trim() ?? null,
         sector: destSector.code,
         sectorName: destSector.name,
         score,

@@ -10,6 +10,7 @@ import {
   tariffApplied,
   totalsFor,
 } from "@/lib/data";
+import { leadingSectors } from "@/lib/pairing";
 
 export const dynamic = "force-dynamic";
 
@@ -117,6 +118,14 @@ export async function GET(request: NextRequest) {
     net: row.aToB !== null && row.bToA !== null ? row.aToB - row.bToA : null,
   }));
 
+  /**
+   * The single largest group each way, from the SAME sourced rows the bars use.
+   *
+   * Computed from `outbound`/`inbound` rather than from `shown`: that list is the top six
+   * by combined trade and is truncated, so the largest one-way flow can sit outside it.
+   */
+  const leading = leadingSectors(outbound, inbound);
+
   const aTotals = totalsFor(a, year);
   const bTotals = totalsFor(b, year);
 
@@ -141,6 +150,8 @@ export async function GET(request: NextRequest) {
         tariffBOnA: tariffApplied(b, a),
         tariffAOnB: tariffApplied(a, b),
         sectors,
+        topAToB: leading.exports,
+        topBToA: leading.imports,
         other,
         hasSectorDetail: hasSectorDetail(),
         /** Which sides came from the buyer's books because the seller publishes nothing. */

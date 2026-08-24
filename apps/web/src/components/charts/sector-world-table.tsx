@@ -7,6 +7,8 @@ import { ArrowUpDown } from "lucide-react";
 import { startRouteProgress } from "@/lib/nav-progress";
 import { useTheme } from "@/components/theme";
 import { sectorColor } from "@/lib/palette";
+import { sectorInfo } from "@/lib/sectors";
+import { SectorIcon } from "@/components/sector-icon";
 import { usd } from "@/lib/format";
 import type { SectorOverview } from "@/lib/types";
 
@@ -112,6 +114,7 @@ export function SectorWorldTable({ rows }: { rows: SectorOverview[] }) {
           <tbody className="tabular">
             {sorted.map((row) => {
               const hue = sectorColor(row.code, resolved);
+              const info = sectorInfo(row.code);
               const on = selected === row.code;
               return (
                 <tr
@@ -123,18 +126,23 @@ export function SectorWorldTable({ rows }: { rows: SectorOverview[] }) {
                 >
                   <td className="px-3 py-2">
                     <span className="flex items-center gap-2">
-                      <span
-                        className="h-2.5 w-2.5 shrink-0 rounded-sm"
-                        style={{ background: hue }}
-                        aria-hidden
-                      />
+                      <SectorIcon code={row.code} className="h-3.5 w-3.5" />
                       <Link
                         href={`/product/${encodeURIComponent(row.code)}`}
                         onClick={(e) => e.stopPropagation()}
+                        // The contents ride in the tooltip rather than the cell: sixteen
+                        // rows of "includes gold, diamonds, jewellery..." would bury the
+                        // figures the table exists to show.
+                        title={info ? `HS ${info.hs}. Includes ${info.covers.toLowerCase()}.` : undefined}
                         className="text-ink-secondary hover:text-ink hover:underline"
                       >
                         {row.name}
                       </Link>
+                      {info && (
+                        <span className="tabular shrink-0 text-2xs text-ink-muted">
+                          HS {info.hs}
+                        </span>
+                      )}
                     </span>
                   </td>
                   <td className="px-3 py-2 text-right font-medium text-ink">

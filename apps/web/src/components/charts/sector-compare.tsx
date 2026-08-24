@@ -6,6 +6,7 @@ import { ChartFrame } from "./chart-frame";
 import { CompareBar, CompareLegend, COMPARE_TRACK_PAD } from "./compare-bar";
 import { flowColors } from "@/lib/palette";
 import { useTheme } from "@/components/theme";
+import { SectorIcon } from "@/components/sector-icon";
 import { usd, usdFull } from "@/lib/format";
 import { pairScale, type SectorPair } from "@/lib/pairing";
 
@@ -88,8 +89,9 @@ export function SectorCompare({
             >
               <Link
                 href={`/product/${encodeURIComponent(row.code)}`}
-                className="group flex min-w-0 items-center gap-1 truncate text-ink-secondary hover:text-ink"
+                className="group flex min-w-0 items-center gap-1.5 truncate text-ink-secondary hover:text-ink"
               >
+                <SectorIcon code={row.code} className="h-3 w-3" />
                 <span className="truncate">{row.name}</span>
                 <ChevronRight
                   className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"

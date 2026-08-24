@@ -8,7 +8,7 @@ import {
   WEIGHTS,
 } from "@/lib/opportunity";
 import { OpportunityControls } from "@/components/opportunity-controls";
-import { OpportunityCard } from "@/components/opportunity-card";
+import { OpportunityBoard } from "@/components/opportunity-board";
 import {
   Calculator,
   ChevronDown,
@@ -44,7 +44,7 @@ export default async function OpportunitiesPage({
   const meta = provenance();
 
   const countries = allCountries()
-    .map((c) => ({ iso3: c.iso3, name: c.name }))
+    .map((c) => ({ iso3: c.iso3, iso2: c.iso2, name: c.name }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const scan = country
@@ -157,17 +157,17 @@ export default async function OpportunitiesPage({
             )}
           </div>
 
-          <div className="mt-3 grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {results.map((opportunity, i) => (
-              <OpportunityCard
-                key={`${opportunity.destination}-${opportunity.sector}`}
-                opportunity={opportunity}
-                originIso={origin}
-                originName={country.name}
-                rank={i + 1}
-              />
-            ))}
-          </div>
+          {/*
+            The legend is built from the FIRST result's own components rather than from
+            WEIGHTS, so the key above the grid and the bands drawn inside it can never
+            drift apart if a component is added, reordered or reweighted.
+          */}
+          <OpportunityBoard
+            results={results}
+            originIso={origin}
+            originName={country.name}
+            componentLegend={results[0].components.map((c) => ({ label: c.label, max: c.max }))}
+          />
 
           {scan && results.length < Math.min(scan.total, MAX_CARDS) && (
             <div className="mt-4 flex justify-center">

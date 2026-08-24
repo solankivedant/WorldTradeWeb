@@ -179,6 +179,36 @@ export function sequentialSteps(mode: Mode): string[] {
   return mode === "dark" ? [...SEQUENTIAL_DARK] : [...SEQUENTIAL_LIGHT];
 }
 
+/**
+ * An ORDINAL ramp: one hue, monotone lightness, strongest step first.
+ *
+ * For a fixed set of ranked parts - the five score components, whose weights put them in
+ * a permanent order - where a categorical palette would be wrong twice over. It would
+ * claim the parts are unrelated peers when they are ranked slices of one total, and on a
+ * card that already wears its sector's categorical hue it would make the same eight hues
+ * mean two different things a centimetre apart.
+ *
+ * The pale end of the underlying sequential ramp is trimmed rather than used. Its two
+ * lightest steps dissolve into a near-white card - measured, not guessed: `#b7d3f6` sits
+ * at 1.50:1 against the card surface, under the 2:1 ordinal floor. Walking down from the
+ * ramp's deep end instead puts the light end at `#86b6ef`, 2.06:1, which clears it.
+ *
+ * Both directions pass `validate_palette.js --ordinal` against the CARD surface, which is
+ * what these are drawn on - not the plane. Re-run it there if either is touched:
+ *   light  #0d366b,#1c5cab,#2a78d6,#5598e7,#86b6ef  on #fcfcfb
+ *   dark   #b7d3f6,#86b6ef,#5598e7,#2a78d6,#1c5cab  on #1a1a19
+ */
+export function ordinalRamp(mode: Mode, count: number): string[] {
+  const ramp = mode === "dark" ? SEQUENTIAL_DARK : SEQUENTIAL_LIGHT;
+  // Both walk inward from the end that reads strongest against their own surface: the
+  // brightest step on a dark card, the deepest on a light one.
+  // Clamped at index 2 so a caller asking for more steps than the ramp has repeats the
+  // last legible one rather than walking off into the two that fail the surface floor.
+  const out: string[] = [];
+  for (let i = 0; i < count; i++) out.push(ramp[Math.max(2, 6 - i)]);
+  return out;
+}
+
 /** Hex → deck.gl RGBA. */
 export function toRGBA(hex: string, alpha = 255): [number, number, number, number] {
   const h = hex.replace("#", "");

@@ -16,6 +16,8 @@ import { flowColors, tariffBandFor } from "@/lib/palette";
 import { useTheme } from "@/components/theme";
 import { CompareBar } from "@/components/charts/compare-bar";
 import { CountryFlag } from "@/components/country-flag";
+import { TopSectors } from "@/components/top-sectors";
+import { SectorIcon } from "@/components/sector-icon";
 import { pct, usd } from "@/lib/format";
 import type { ConnectionDetail } from "./types";
 
@@ -224,6 +226,25 @@ export function ConnectionPanel({
             </h3>
           </div>
 
+          {/* The answer first, the sixteen-row split underneath it. */}
+          {(detail.topAToB || detail.topBToA) && (
+            <div className="mb-2.5">
+              <TopSectors
+                exports={detail.topAToB}
+                imports={detail.topBToA}
+                reporterName={ca.name}
+                variant="panel"
+                exportHeading={`${ca.name} sells ${cb.name} most`}
+                importHeading={`${cb.name} sells ${ca.name} most`}
+                shareOf={{
+                  exports: "this direction",
+                  imports: "this direction",
+                }}
+                linkSectors={false}
+              />
+            </div>
+          )}
+
           {!detail.hasSectorDetail || detail.sectors.length === 0 ? (
             <p className="text-2xs leading-relaxed text-ink-muted">
               No sector breakdown is published for this corridor. That is absent data, not
@@ -261,11 +282,12 @@ export function ConnectionPanel({
                       <div className="mb-0.5 flex items-baseline justify-between gap-2 text-2xs">
                         <Link
                           href={`/product/${encodeURIComponent(row.code)}`}
-                          className="flex min-w-0 items-center gap-1 truncate text-ink-secondary hover:text-ink hover:underline"
+                          className="flex min-w-0 items-center gap-1.5 truncate text-ink-secondary hover:text-ink hover:underline"
                         >
                           {lit && (
                             <Layers className="h-2.5 w-2.5 shrink-0 text-series-1" aria-hidden />
                           )}
+                          <SectorIcon code={row.code} className="h-3 w-3" />
                           <span className="truncate">{row.name}</span>
                         </Link>
                         {row.net !== null && (

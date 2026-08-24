@@ -10,7 +10,6 @@ import {
   Lightbulb,
   Loader2,
   Map as MapIcon,
-  Package,
   Percent,
   Scale,
   Search,
@@ -18,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
+import { SectorIcon } from "@/components/sector-icon";
 import { startRouteProgress } from "@/lib/nav-progress";
 import { SECTOR_CATALOG } from "@/lib/sectors";
 import { ThemeToggle } from "./theme";
@@ -30,7 +30,7 @@ interface CountryRef {
 
 type Hit =
   | { kind: "country"; iso3: string; iso2: string | null; name: string }
-  | { kind: "sector"; code: string; name: string };
+  | { kind: "sector"; code: string; name: string; hs: string };
 
 const NAV = [
   { href: "/", label: "Map", Icon: MapIcon },
@@ -94,7 +94,7 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
 
     const sectorHits: Hit[] = SECTOR_CATALOG.filter((s) => s.name.toLowerCase().includes(q))
       .slice(0, 3)
-      .map((s) => ({ kind: "sector" as const, code: s.code, name: s.name }));
+      .map((s) => ({ kind: "sector" as const, code: s.code, name: s.name, hs: s.hs }));
 
     return [...countryHits, ...sectorHits];
   }, [query, countries]);
@@ -241,9 +241,9 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
                     </>
                   ) : (
                     <>
-                      <Package className="h-3.5 w-3.5 text-ink-muted" aria-hidden />
+                      <SectorIcon code={hit.code} className="h-3.5 w-3.5" />
                       <span className="flex-1 truncate">{hit.name}</span>
-                      <span className="text-2xs text-ink-muted">sector</span>
+                      <span className="tabular text-2xs text-ink-muted">HS {hit.hs}</span>
                     </>
                   )}
                 </button>

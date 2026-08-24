@@ -103,3 +103,62 @@ export function pairScale(
 ): number {
   return Math.max(...rows.map((r) => Math.max(r.exports ?? 0, r.imports ?? 0)), 1);
 }
+
+// ------------------------------------------------------- what a country trades most
+
+/**
+ * The single largest sector group on one side of a country's trade.
+ *
+ * `share` is that group's percentage of the SAME cube it came from - the product cube
+ * summed over its sixteen groups - never of `totals.json`. Those are two separate WITS
+ * aggregations and for a handful of countries (DOM, GUY) they disagree by 3-11%, so
+ * dividing a cube figure by a totals figure would produce a share that is quietly wrong
+ * and, for the worst cases, could exceed 100%. Denominator and numerator must come from
+ * one aggregation (see CLAUDE.md, "Trade is measured at three grains").
+ */
+export interface LeadingSector {
+  code: string;
+  name: string;
+  value: number;
+  /** Percent of this direction's product cube. */
+  share: number;
+  /** Groups summed to reach that denominator, so the reader can see the base. */
+  ofGroups: number;
+}
+
+function leading(rows: ProductRow[]): LeadingSector | null {
+  if (!rows.length) return null;
+  const total = rows.reduce((sum, row) => sum + row.value, 0);
+  // A reported zero is a real datum, but it cannot be a "largest" - and dividing by a
+  // zero total would produce Infinity rather than an absent answer.
+  if (total <= 0) return null;
+  const top = rows.reduce((best, row) => (row.value > best.value ? row : best), rows[0]);
+  if (top.value <= 0) return null;
+  return {
+    code: top.code,
+    name: top.name,
+    value: top.value,
+    share: (top.value / total) * 100,
+    ofGroups: rows.length,
+  };
+}
+
+/**
+ * What a country sells most, and what it buys most.
+ *
+ * Returned as a PAIR and never singly, for the same reason nothing else in this app
+ * shows one direction alone: "Fuels" as a country's biggest export reads as an economy
+ * built on oil until you see fuels are also its biggest import, at which point it reads
+ * as a refiner. Both sides or neither.
+ *
+ * Each side is ranked within its own direction - unlike `pairSectors`, which ranks by the
+ * two combined. That difference is the point: this answers "what does it sell most",
+ * which is a question about one side, and the pairing rule exists so the answer is never
+ * PRESENTED alone, not to stop it being computed.
+ */
+export function leadingSectors(
+  exportRows: ProductRow[],
+  importRows: ProductRow[],
+): { exports: LeadingSector | null; imports: LeadingSector | null } {
+  return { exports: leading(exportRows), imports: leading(importRows) };
+}

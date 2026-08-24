@@ -31,7 +31,8 @@ import { Card, Crumb, Empty, ProvenanceBar, Stat, Warn } from "@/components/ui";
 import { TradeSeries } from "@/components/charts/trade-series";
 import { SectorCompare } from "@/components/charts/sector-compare";
 import { PartnerCompare } from "@/components/charts/partner-compare";
-import { pairPartners, pairSectors } from "@/lib/pairing";
+import { leadingSectors, pairPartners, pairSectors } from "@/lib/pairing";
+import { TopSectors } from "@/components/top-sectors";
 import { growth, pct, share, usd } from "@/lib/format";
 import { CountryFlag } from "@/components/country-flag";
 import { MirrorCountry, toMirrorPairs } from "@/components/mirror-country";
@@ -80,6 +81,9 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
 
   const partners = pairPartners(toInputs("x"), toInputs("m"));
   const sectorPairs = pairSectors(exportProducts, importProducts);
+  // Ranked within each direction, not by the two combined - the largest export can sit
+  // well down a combined ranking. Both sides are rendered together or not at all.
+  const leading = leadingSectors(exportProducts, importProducts);
 
   const rank = exportRank(country.iso3, year);
   const worldTotal = worldExports(year);
@@ -221,6 +225,15 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
           </Warn>
         </div>
       )}
+
+      {/* ---- what it trades most, stated before the mix that implies it ---- */}
+      <div className="mt-3">
+        <TopSectors
+          exports={leading.exports}
+          imports={leading.imports}
+          reporterName={country.name}
+        />
+      </div>
 
       {/* ---- composition and partners, each comparing both directions ---- */}
       <div className="mt-3 grid gap-3 lg:grid-cols-2">

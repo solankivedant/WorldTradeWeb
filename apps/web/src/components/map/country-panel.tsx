@@ -18,6 +18,8 @@ import { CompareBar, CompareLegend } from "@/components/charts/compare-bar";
 import { useTheme } from "@/components/theme";
 import { growth, usd } from "@/lib/format";
 import { CountryFlag } from "@/components/country-flag";
+import { TopSectors } from "@/components/top-sectors";
+import { SectorIcon } from "@/components/sector-icon";
 import type { CountryDetail, PartnerValue } from "./types";
 
 const PANEL_W = 340;
@@ -203,6 +205,24 @@ export function CountryPanel({
           )}
         </div>
 
+        {/* ---- what it actually trades, named ----
+            Above the mix rather than inside it. The mix answers "how is it spread"; this
+            answers "what is it, mostly", and a reader who has just clicked a country on a
+            world map is asking the second question first. */}
+        {(detail.topExportSector || detail.topImportSector) && (
+          <Section title="What it trades most">
+            <TopSectors
+              exports={detail.topExportSector}
+              imports={detail.topImportSector}
+              reporterName={detail.name}
+              variant="panel"
+              // A sector link would navigate away and throw away the map selection the
+              // reader just made. The panel's own "Detailed view" is the way out.
+              linkSectors={false}
+            />
+          </Section>
+        )}
+
         {/* ---- sector mix, both directions on one centre line ---- */}
         {detail.sectors.length > 0 && (
           <Section title={lens ? "Trade by sector · full mix" : "Trade by sector"}>
@@ -223,14 +243,12 @@ export function CountryPanel({
                   }
                 >
                   <div className="flex items-baseline justify-between gap-2 text-2xs">
-                    <span className="min-w-0 flex-1 truncate text-ink-secondary">
+                    <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-ink-secondary">
                       {lens?.code === s.code && (
-                        <Layers
-                          className="mr-1 inline h-2.5 w-2.5 shrink-0 text-series-1"
-                          aria-hidden
-                        />
+                        <Layers className="h-2.5 w-2.5 shrink-0 text-series-1" aria-hidden />
                       )}
-                      {s.name}
+                      <SectorIcon code={s.code} className="h-3 w-3" />
+                      <span className="truncate">{s.name}</span>
                     </span>
                     {s.net !== null && (
                       <span

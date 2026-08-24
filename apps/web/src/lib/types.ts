@@ -163,6 +163,8 @@ export interface Opportunity {
   destination: string;
   destinationName: string;
   destinationIso2: string | null;
+  /** World Bank region of the destination, for grouping and filtering result sets. */
+  destinationRegion: string | null;
   sector: string;
   sectorName: string;
   score: number;

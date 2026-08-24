@@ -15,6 +15,7 @@ import {
 } from "@/lib/data";
 import type { PartnerValue } from "@/lib/data";
 import { sectorName } from "@/lib/sectors";
+import { leadingSectors } from "@/lib/pairing";
 
 export const dynamic = "force-dynamic";
 
@@ -278,6 +279,12 @@ export async function GET(request: NextRequest) {
     // adding to $89B, and the reader has no way to tell which number the filter applies
     // to. Year-on-year is dropped rather than faked: the product cube is latest-year
     // only, so there is no prior-year sector figure to compare against.
+    // What it sells most / buys most, each ranked within its OWN direction. The `sectors`
+    // list above is the top five by combined trade, so a country's largest export can sit
+    // below the cut - Nigeria's fuels exports against its machinery imports, for instance.
+    // Computed from the unsliced rows, never from the truncated list.
+    const leading = leadingSectors(sectorExports, sectorImports);
+
     const lens = sector ? sectorMap.get(sector) : undefined;
     const filtered = Boolean(sector && hasSectorDetail());
 
@@ -293,6 +300,8 @@ export async function GET(request: NextRequest) {
       rank: filtered ? null : exportRank(focus, year),
       hhi: diversificationHHI(focus),
       sectors,
+      topExportSector: leading.exports,
+      topImportSector: leading.imports,
       sectorFilter: filtered ? { code: sector, name: sectorName(sector) } : null,
       topExports: exports.slice(0, 6),
       topImports: imports.slice(0, 6),

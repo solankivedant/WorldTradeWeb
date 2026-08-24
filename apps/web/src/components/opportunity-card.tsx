@@ -2,11 +2,22 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowRight, ChevronDown, Package, Percent, ShoppingCart, TrendingUp } from "lucide-react";
+import {
+  ArrowRight,
+  ChevronDown,
+  Package,
+  Percent,
+  ShoppingCart,
+  Star,
+  TrendingUp,
+} from "lucide-react";
 import { sectorColor } from "@/lib/palette";
+import { sectorInfo } from "@/lib/sectors";
+import { SectorIcon } from "@/components/sector-icon";
 import { useTheme } from "./theme";
 import { pct, usd } from "@/lib/format";
 import { CountryFlag } from "@/components/country-flag";
+import { ScoreSpine } from "@/components/charts/score-spine";
 import { EstimateTag } from "./ui";
 import type { Opportunity } from "@/lib/types";
 
@@ -15,14 +26,15 @@ import type { Opportunity } from "@/lib/types";
  *
  * The score breakdown is the feature, not supplementary detail. Without it the card is
  * an unverifiable assertion, and V1 explicitly rejects unauditable scoring
- * (docs/DESIGN.md §10). It is collapsed by default only because the SMB persona is
- * overwhelmed by five components at a glance - one click always reveals the full working.
+ * (docs/DESIGN.md §10). The full working stays behind one click because the SMB persona
+ * is overwhelmed by five components at a glance - but the SHAPE of the score is now on
+ * the face of the card as a stacked spine, because two cards scoring 61 for completely
+ * different reasons used to look identical until both were expanded.
  *
  * The card leads with a SENTENCE, not with the four-figure grid it used to lead with.
  * Four unlabelled percentages in a row is data the reader has to assemble into a claim
  * themselves; the claim is what they came for, and the figures underneath are the
- * evidence for it. The score is a meter as well as a number for the same reason - "68"
- * means nothing until you can see it against the 100 it could have been.
+ * evidence for it.
  */
 
 const BANDS = [
@@ -36,17 +48,23 @@ export function OpportunityCard({
   originIso,
   originName,
   rank,
+  pinned,
+  onPin,
 }: {
   opportunity: Opportunity;
   originIso: string;
   originName: string;
   rank?: number;
+  /** Undefined until the shortlist has read storage - see `useShortlist`. */
+  pinned?: boolean;
+  onPin?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const { resolved } = useTheme();
   const { evidence } = opportunity;
   const band = BANDS.find((b) => opportunity.score >= b.floor) ?? BANDS[2];
   const hue = sectorColor(opportunity.sector, resolved);
+  const sector = sectorInfo(opportunity.sector);
 
   // The headline restates figures already on the card - it invents nothing. Its job is to
   // put them in the order the claim is actually made in.
@@ -58,7 +76,11 @@ export function OpportunityCard({
         : `${originName} supplies an estimated ${pct(evidence.currentShare, 1)} today.`;
 
   return (
-    <article className="card flex flex-col overflow-hidden transition-shadow hover:shadow-md">
+    <article
+      className={`card flex flex-col overflow-hidden transition-shadow hover:shadow-md ${
+        pinned ? "ring-1 ring-series-1/60" : ""
+      }`}
+    >
       {/* Sector identity as a full-width rule, so the colour is visible at card size
           rather than as a 8px dot that reads as a bullet point. */}
       <div className="h-1 w-full" style={{ background: hue }} aria-hidden />
@@ -69,13 +91,15 @@ export function OpportunityCard({
             {rank !== undefined && <span className="tabular font-medium">#{rank}</span>}
             <span
               className="inline-flex items-center gap-1.5 truncate rounded-md bg-raised px-1.5 py-0.5 font-medium text-ink-secondary"
-              title={opportunity.sectorName}
+              // A card recommending "Stone & glass" is recommending gold and jewellery.
+              // The reader has to be able to find that out without leaving the card.
+              title={
+                sector
+                  ? `${sector.name} · HS ${sector.hs}. Includes ${sector.covers.toLowerCase()}.`
+                  : opportunity.sectorName
+              }
             >
-              <span
-                className="h-2 w-2 shrink-0 rounded-sm"
-                style={{ background: hue }}
-                aria-hidden
-              />
+              <SectorIcon code={opportunity.sector} className="h-3 w-3" />
               <span className="truncate">{opportunity.sectorName}</span>
             </span>
           </div>
@@ -89,25 +113,36 @@ export function OpportunityCard({
           </h3>
         </div>
 
-        <div className="shrink-0 text-right">
-          <div className="tabular text-2xl font-semibold leading-none">{opportunity.score}</div>
-          <div className={`mt-1 text-2xs font-medium ${band.tone}`}>{band.label}</div>
+        <div className="flex shrink-0 items-start gap-1.5">
+          {onPin && (
+            <button
+              type="button"
+              onClick={onPin}
+              aria-pressed={pinned ?? false}
+              title={
+                pinned
+                  ? "Remove from your shortlist"
+                  : "Keep this market on your shortlist while you change filters"
+              }
+              className={`rounded-md p-1 transition-colors hover:bg-raised ${
+                pinned ? "text-series-1" : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              <Star className={`h-3.5 w-3.5 ${pinned ? "fill-current" : ""}`} aria-hidden />
+              <span className="sr-only">
+                {pinned ? "Remove from shortlist" : "Add to shortlist"}
+              </span>
+            </button>
+          )}
+          <div className="text-right">
+            <div className="tabular text-2xl font-semibold leading-none">{opportunity.score}</div>
+            <div className={`mt-1 text-2xs font-medium ${band.tone}`}>{band.label}</div>
+          </div>
         </div>
       </div>
 
-      {/* Meter: accent fill on a lighter step of the same hue, so the unfilled part still
-          reads as part of the scale rather than as empty card. */}
       <div className="px-4">
-        <div
-          className="h-1.5 w-full overflow-hidden rounded-full bg-series-1/15"
-          role="img"
-          aria-label={`Score ${opportunity.score} out of 100`}
-        >
-          <div
-            className="h-full rounded-full bg-series-1"
-            style={{ width: `${Math.max(2, opportunity.score)}%` }}
-          />
-        </div>
+        <ScoreSpine components={opportunity.components} score={opportunity.score} />
       </div>
 
       {/* Reserved height for two lines: without it a one-line headline and a two-line one

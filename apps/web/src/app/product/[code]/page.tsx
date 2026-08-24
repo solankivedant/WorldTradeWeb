@@ -6,10 +6,11 @@ import {
   productsFor,
   provenance,
 } from "@/lib/data";
-import { sectorName, SECTOR_CATALOG } from "@/lib/sectors";
+import { sectorInfo, sectorName, SECTOR_CATALOG } from "@/lib/sectors";
 import { ArrowDownToLine, ArrowUpFromLine, Boxes, Package, Users } from "lucide-react";
 import { Card, Crumb, ProvenanceBar, Stat } from "@/components/ui";
 import { PartnerCompare } from "@/components/charts/partner-compare";
+import { SectorIcon } from "@/components/sector-icon";
 import type { PartnerPair } from "@/lib/pairing";
 import { pct, usd } from "@/lib/format";
 
@@ -24,6 +25,7 @@ export default async function ProductPage({ params }: { params: Promise<{ code: 
   if (!SECTOR_CATALOG.some((s) => s.code === code)) notFound();
 
   const name = sectorName(code);
+  const info = sectorInfo(code);
   const year = latestYear();
 
   /**
@@ -73,12 +75,26 @@ export default async function ProductPage({ params }: { params: Promise<{ code: 
 
       <div className="mt-2">
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          <Package className="h-5 w-5 text-ink-muted" aria-hidden />
+          {/* The subject's own glyph, in its own hue - the same pair it wears in every
+              chart and table, so arriving here confirms the mapping rather than
+              introducing a new one. */}
+          <SectorIcon code={code} className="h-6 w-6" />
           {name}
         </h1>
         <p className="mt-1 text-xs text-ink-muted">
           HS section group <span className="tabular">{code}</span> · global market · {year}
         </p>
+        {/* What is actually in the group. A reader who arrives here from a chart knows the
+            label and not the contents, and for several groups the label is actively
+            misleading - "Stone & glass" is where gold and diamonds are counted. */}
+        {info && (
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-ink-secondary">
+            <span className="font-medium text-ink">HS chapters {info.hs}.</span> Includes{" "}
+            {info.covers.toLowerCase()}. These are examples from the chapters, not a full
+            list - the group is an aggregate and cannot be drilled into a single product
+            line at this tier.
+          </p>
+        )}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

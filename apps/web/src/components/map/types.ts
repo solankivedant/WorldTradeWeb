@@ -25,6 +25,15 @@ export interface PartnerValue {
   src: "exporter" | "importer";
 }
 
+/** The single largest group on one side, mirrored from `lib/pairing`'s LeadingSector. */
+export interface LeadingSectorSlice {
+  code: string;
+  name: string;
+  value: number;
+  share: number;
+  ofGroups: number;
+}
+
 export interface SectorSlice {
   code: string;
   name: string;
@@ -46,6 +55,15 @@ export interface CountryDetail {
   rank: number | null;
   hhi: number | null;
   sectors: SectorSlice[];
+  /**
+   * What this country sells most and buys most, each ranked within its OWN direction.
+   *
+   * Not derivable from `sectors` above: that list is the top five by COMBINED trade, so
+   * the largest export can sit at rank four or be missing from it entirely. Both sides
+   * always travel together - see `TopSectors`.
+   */
+  topExportSector: LeadingSectorSlice | null;
+  topImportSector: LeadingSectorSlice | null;
   /** Set when the map's sector lens is active. Every figure above is narrowed to it. */
   sectorFilter: { code: string; name: string } | null;
   topExports: PartnerValue[];
@@ -99,6 +117,9 @@ export interface ConnectionDetail {
   tariffBOnA: number | null;
   tariffAOnB: number | null;
   sectors: ConnectionSector[];
+  /** Largest group each way, ranked within its own direction rather than combined. */
+  topAToB: LeadingSectorSlice | null;
+  topBToA: LeadingSectorSlice | null;
   /** Everything below the shown rows, summed so the bars still cover the whole corridor. */
   other: { count: number; aToB: number; bToA: number } | null;
   hasSectorDetail: boolean;
