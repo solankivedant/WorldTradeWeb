@@ -30,6 +30,17 @@ import {
   dataset,
 } from "@/lib/data";
 import { Card, Crumb, Empty, ProvenanceBar, Stat, Warn } from "@/components/ui";
+import { PageHeader } from "@/components/page-header";
+import { RelatedViews } from "@/components/related-views";
+import {
+  TO_SOURCE,
+  toCorridor,
+  toExplore,
+  toOpportunities,
+  toSector,
+  toTariffs,
+  type RelatedLink,
+} from "@/lib/views";
 import { TradeSeries } from "@/components/charts/trade-series";
 import { SectorCompare } from "@/components/charts/sector-compare";
 import { PartnerCompare } from "@/components/charts/partner-compare";
@@ -156,36 +167,55 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
     );
   }
 
+  /**
+   * Where this country leads next.
+   *
+   * Built from the rows already ranked above rather than from a fixed list, so the
+   * corridor offered is genuinely this country's largest and the sector is genuinely what
+   * it sells most. A "related" link that points somewhere generic teaches the reader that
+   * these links are decoration.
+   */
+  const topPartner = partners[0] ?? null;
+  const topSector = leading.exports;
+  const relatedLinks: RelatedLink[] = [
+    topPartner
+      ? toCorridor(country.iso3, topPartner.iso3, country.name, topPartner.name)
+      : null,
+    topSector ? toSector(topSector.code, topSector.name) : null,
+    toTariffs(country.iso3, country.name),
+    toOpportunities(country.iso3, country.name),
+    toExplore(`?country=${country.iso3}&view=connections`, country.name),
+    TO_SOURCE,
+  ].filter((link): link is RelatedLink => link !== null);
+
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-5 lg:px-6">
-      <Crumb items={[{ label: "Map", href: "/" }, { label: country.name }]} />
-
-      {/* ---- header ---- */}
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2.5 text-2xl font-semibold tracking-tight">
-            <CountryFlag iso2={country.iso2} name={country.name} size="xl" />
-            {country.name}
-          </h1>
-          <p className="mt-1 text-xs text-ink-muted">
-            {[country.region, country.incomeGroup, country.capital]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/opportunities?origin=${country.iso3}`}
-            className="flex items-center gap-1.5 rounded-md border border-series-1/40 bg-series-1/10 px-3 py-1.5 text-xs text-ink hover:bg-series-1/20"
-          >
-            Export opportunities from {country.iso3}
-            <ArrowUpRight className="h-3 w-3" aria-hidden />
-          </Link>
-          <span className="tabular rounded-md border border-hairline px-2.5 py-1.5 text-xs text-ink-secondary">
-            {year}
-          </span>
-        </div>
-      </div>
+      <PageHeader
+        crumb={[
+          { label: "Map", href: "/" },
+          { label: "Countries", href: "/explore?view=connections" },
+          { label: country.name },
+        ]}
+        view="country"
+        title={country.name}
+        subject={<CountryFlag iso2={country.iso2} name={country.name} size="xl" />}
+        meta={[country.region, country.incomeGroup, country.capital].filter(Boolean).join(" · ")}
+        lede={`Figures below are ${country.name}'s own customs reports for ${year}, with the previous year alongside for change.`}
+        actions={
+          <>
+            <Link
+              href={`/opportunities?origin=${country.iso3}`}
+              className="flex items-center gap-1.5 rounded-md border border-series-1/40 bg-series-1/10 px-3 py-1.5 text-xs text-ink hover:bg-series-1/20"
+            >
+              Export opportunities from {country.iso3}
+              <ArrowUpRight className="h-3 w-3" aria-hidden />
+            </Link>
+            <span className="tabular rounded-md border border-hairline px-2.5 py-1.5 text-xs text-ink-secondary">
+              {year}
+            </span>
+          </>
+        }
+      />
 
       {/* ---- KPI row ---- */}
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -336,6 +366,18 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
         families={indicatorFamilies()}
         readings={indicatorsFor(country.iso3)}
         countryName={country.name}
+      />
+
+      {/*
+        The page used to end at the provenance strip, which made a country a dead end: the
+        biggest partner and the biggest sector were both on screen as bars, and neither
+        said that a whole screen existed behind it. These links are built from the figures
+        already computed above, so they always point at this country's actual largest
+        relationships rather than at a generic list.
+      */}
+      <RelatedViews
+        links={relatedLinks}
+        hint={`The same build, ${country.name} seen from other angles`}
       />
 
       <div className="card mt-3 overflow-hidden">

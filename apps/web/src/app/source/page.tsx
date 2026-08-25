@@ -19,7 +19,9 @@ import {
   Sigma,
   TriangleAlert,
 } from "lucide-react";
-import { Crumb, EstimateTag, Warn } from "@/components/ui";
+import { EstimateTag, Warn } from "@/components/ui";
+import { PageHeader } from "@/components/page-header";
+import { ViewMap } from "@/components/view-map";
 
 export const metadata = { title: "Source - WorldTradeWeb" };
 
@@ -135,21 +137,20 @@ export default function DataPage() {
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-5 lg:px-6">
-      <Crumb items={[{ label: "Map", href: "/" }, { label: "Source" }]} />
-
-      <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold tracking-tight">
-        <Database className="h-5 w-5 text-ink-muted" aria-hidden />
-        Where these numbers come from
-      </h1>
-      <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-ink-secondary">
-        Every figure on this site traces back to a published source and a dated snapshot.
-        This page is the audit trail: the sources, what the pipeline did to them, what it
-        threw away and why, and where the data is weakest. Nothing here is derived from a
-        model or filled in by estimate unless it is labelled as one.
-      </p>
+      <PageHeader
+        crumb={[{ label: "Map", href: "/" }, { label: "Source" }]}
+        view="source"
+        title="Where these numbers come from"
+        subject={<Database className="h-5 w-5 text-ink-muted" aria-hidden />}
+        meta={`Vintage ${meta.vintage} · one build behind every screen in the product`}
+        lede="This page is the audit trail: the sources, what the pipeline did to them, what it threw away and why, and where the data is weakest. Nothing here is derived from a model or filled in by estimate unless it is labelled as one."
+      />
 
       {/* ---- provenance band: the four facts that identify any figure on the site ---- */}
-      <section className="card mt-4 grid gap-px overflow-hidden bg-hairline sm:grid-cols-2 lg:grid-cols-4">
+      {/* Five facts, five columns. At lg:grid-cols-4 the fifth wrapped onto its own row
+          and the three leftover tracks rendered as a bare slab of hairline - a grid gap
+          masquerading as an empty card. */}
+      <section className="card mt-4 grid gap-px overflow-hidden bg-hairline sm:grid-cols-2 lg:grid-cols-5">
         <Fact
           icon={<Landmark className="h-3.5 w-3.5" aria-hidden />}
           label="Primary source"
@@ -192,6 +193,20 @@ export default function DataPage() {
           }
         />
       </section>
+
+      {/*
+        ---- what the build feeds ----
+        This page is the one place a reader comes to ask "is any of this consistent", and
+        the honest answer is that all eight screens are the same build cut differently.
+        Saying so here, next to the vintage that identifies that build, is what turns
+        eight routes into one dataset in the reader's head.
+      */}
+      <Section
+        title="The screens this build feeds"
+        icon={<Share2 className="h-3 w-3" aria-hidden />}
+      >
+        <ViewMap linkToSource={false} />
+      </Section>
 
       {/* ---- sources ---- */}
       <Section title="The sources themselves" icon={<Landmark className="h-3 w-3" aria-hidden />}>

@@ -4,7 +4,6 @@ import {
   ArrowDownToLine,
   ArrowLeftRight,
   ArrowUpFromLine,
-  ArrowUpRight,
   Percent,
   Repeat,
   Scale,
@@ -22,6 +21,17 @@ import {
   totalsFor,
 } from "@/lib/data";
 import { Card, Crumb, Empty, EstimateTag, ProvenanceBar, Stat, Warn } from "@/components/ui";
+import { PageHeader } from "@/components/page-header";
+import { RelatedViews } from "@/components/related-views";
+import {
+  TO_SOURCE,
+  toCountry,
+  toExplore,
+  toOpportunities,
+  toSector,
+  toTariffs,
+  type RelatedLink,
+} from "@/lib/views";
 import { SectorCompare } from "@/components/charts/sector-compare";
 import { leadingSectors, pairSectors } from "@/lib/pairing";
 import { TopSectors } from "@/components/top-sectors";
@@ -145,48 +155,59 @@ export default async function CorridorPage({
 
   const meta = provenance();
 
+  /**
+   * Widening out from this corridor. The sector offered is what the corridor itself
+   * carries most, read from the corridor cube - not either country's world mix, which is
+   * a different question and routinely a different answer.
+   */
+  const corridorSector = corridorLeading.exports ?? corridorLeading.imports;
+  const relatedLinks: RelatedLink[] = [
+    toCountry(ca.iso3, ca.name),
+    toCountry(cb.iso3, cb.name),
+    corridorSector ? toSector(corridorSector.code, corridorSector.name) : null,
+    toTariffs(cb.iso3, cb.name, ca.iso3),
+    toOpportunities(ca.iso3, ca.name),
+    toExplore(`?a=${ca.iso3}&b=${cb.iso3}&view=compare`),
+    TO_SOURCE,
+  ].filter((link): link is RelatedLink => link !== null);
+
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-5 lg:px-6">
-      <Crumb
-        items={[
+      <PageHeader
+        crumb={[
           { label: "Map", href: "/" },
           { label: ca.name, href: `/country/${ca.iso3}` },
-          { label: cb.name },
+          { label: `${ca.iso3} and ${cb.iso3}` },
         ]}
-      />
-
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight">
-            <Link
-              href={`/country/${ca.iso3}`}
-              className="flex items-center gap-2 hover:underline"
-            >
+        view="corridor"
+        title={
+          <>
+            {/* Both ends stay clickable inside the heading. A corridor is the one page
+                whose title names two subjects, and a reader who arrived from one of them
+                usually wants the other. */}
+            <Link href={`/country/${ca.iso3}`} className="flex items-center gap-2 hover:underline">
               <CountryFlag iso2={ca.iso2} name={ca.name} size="lg" />
               {ca.name}
             </Link>
             <ArrowLeftRight className="h-4 w-4 text-ink-muted" aria-hidden />
-            <Link
-              href={`/country/${cb.iso3}`}
-              className="flex items-center gap-2 hover:underline"
-            >
+            <Link href={`/country/${cb.iso3}`} className="flex items-center gap-2 hover:underline">
               <CountryFlag iso2={cb.iso2} name={cb.name} size="lg" />
               {cb.name}
             </Link>
-          </h1>
-          <p className="mt-1 text-xs text-ink-muted">
-            Bilateral trade corridor · {year} · both directions, each reported by the country
-            that sells
-          </p>
-        </div>
-        <Link
-          href={`/corridor/${cb.iso3}/${ca.iso3}`}
-          className="flex items-center gap-1.5 rounded-lg border border-hairline px-3 py-1.5 text-xs text-ink-secondary transition-colors hover:bg-raised hover:text-ink"
-        >
-          <Repeat className="h-3.5 w-3.5" aria-hidden />
-          Reverse direction
-        </Link>
-      </div>
+          </>
+        }
+        meta={`${year} · both directions, each reported by the country that sells`}
+        lede={`Everything here is scoped to these two countries only - ${ca.name}'s world totals live on its own page.`}
+        actions={
+          <Link
+            href={`/corridor/${cb.iso3}/${ca.iso3}`}
+            className="flex items-center gap-1.5 rounded-lg border border-hairline px-3 py-1.5 text-xs text-ink-secondary transition-colors hover:bg-raised hover:text-ink"
+          >
+            <Repeat className="h-3.5 w-3.5" aria-hidden />
+            Read it from {cb.iso3}
+          </Link>
+        }
+      />
 
       <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat
@@ -308,22 +329,16 @@ export default async function CorridorPage({
         />
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Link
-          href={`/opportunities?origin=${ca.iso3}`}
-          className="flex items-center gap-1.5 rounded-md border border-series-1/40 bg-series-1/10 px-3 py-1.5 text-xs hover:bg-series-1/20"
-        >
-          Opportunities from {ca.name}
-          <ArrowUpRight className="h-3 w-3" aria-hidden />
-        </Link>
-        <Link
-          href={`/tariffs?reporter=${cb.iso3}&partner=${ca.iso3}`}
-          className="flex items-center gap-1.5 rounded-md border border-hairline px-3 py-1.5 text-xs text-ink-secondary hover:text-ink"
-        >
-          Tariff detail
-          <ArrowUpRight className="h-3 w-3" aria-hidden />
-        </Link>
-      </div>
+      {/*
+        The two bare buttons that used to close this page named routes rather than
+        questions, and left out the three places a corridor most obviously leads: either
+        country's own profile, and the worldwide market for whatever this corridor
+        actually carries.
+      */}
+      <RelatedViews
+        links={relatedLinks}
+        hint={`Same build, ${ca.iso3}-${cb.iso3} widened out`}
+      />
 
       <div className="card mt-3 overflow-hidden">
         <ProvenanceBar meta={meta} extra={`${ca.iso3}-${cb.iso3} · ${year}`} />

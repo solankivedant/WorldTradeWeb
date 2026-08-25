@@ -16,7 +16,19 @@ import {
   sectorSummary,
   tariffApplied,
 } from "@/lib/data";
-import { Crumb, ProvenanceBar, Stat } from "@/components/ui";
+import { ProvenanceBar, Stat } from "@/components/ui";
+import { PageHeader } from "@/components/page-header";
+import { RelatedViews } from "@/components/related-views";
+import {
+  TO_SOURCE,
+  toCorridor,
+  toCountry,
+  toMap,
+  toOpportunities,
+  toSector,
+  toTariffs,
+  type RelatedLink,
+} from "@/lib/views";
 import { ExploreControls, CorridorComparePicker } from "@/components/explore-controls";
 import { ExploreTabs } from "@/components/explore-tabs";
 import { SectorWorldTable } from "@/components/charts/sector-world-table";
@@ -109,20 +121,43 @@ export default async function ExplorePage({
   const left = buildConnection(one("a").toUpperCase(), one("b").toUpperCase());
   const right = buildConnection(one("c").toUpperCase(), one("d").toUpperCase());
 
+  /**
+   * Handing the reader off to a subject.
+   *
+   * These follow the FILTERS, not a fixed list: narrowing to one sector should offer that
+   * sector's own page, and naming a country should offer that country's. With nothing set
+   * they fall back to the largest corridor currently listed, which is at least a real row
+   * the reader can see above.
+   */
+  const filteredCountry = country ? getCountry(country) : null;
+  const topCorridor = corridors[0] ?? null;
+  const relatedLinks: RelatedLink[] = [
+    chosen ? toSector(chosen.code, chosen.name) : null,
+    filteredCountry ? toCountry(filteredCountry.iso3, filteredCountry.name) : null,
+    topCorridor
+      ? toCorridor(
+          topCorridor.reporter,
+          topCorridor.partner,
+          names[topCorridor.reporter] ?? topCorridor.reporter,
+          names[topCorridor.partner] ?? topCorridor.partner,
+        )
+      : null,
+    filteredCountry ? toTariffs(filteredCountry.iso3, filteredCountry.name) : null,
+    filteredCountry ? toOpportunities(filteredCountry.iso3, filteredCountry.name) : null,
+    toMap(filteredCountry ? `?focus=${filteredCountry.iso3}` : ""),
+    TO_SOURCE,
+  ].filter((link): link is RelatedLink => link !== null);
+
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-5 lg:px-6">
-      <Crumb items={[{ label: "Map", href: "/" }, { label: "Explore" }]} />
-
-      <h1 className="mt-2 flex items-center gap-2 text-2xl font-semibold tracking-tight">
-        <Compass className="h-5 w-5 text-ink-muted" aria-hidden />
-        World trade explorer
-      </h1>
-      <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-ink-secondary">
-        Every sector and every connection at once, with no country selected first. Narrow
-        it by sector, by a country at either end, by region or by size, then move between
-        the three panes below - and send any connection you find straight into the
-        comparison.
-      </p>
+      <PageHeader
+        crumb={[{ label: "Map", href: "/" }, { label: "Explore" }]}
+        view="explore"
+        title="World trade explorer"
+        subject={<Compass className="h-5 w-5 text-ink-muted" aria-hidden />}
+        meta={`${year} · the whole cube, before anything is selected`}
+        lede="Narrow it by sector, by a country at either end, by region or by size, then move between the three panes below - and send any connection you find straight into the comparison."
+      />
 
       <div className="mt-4">
         <ExploreControls countries={countries} regions={allRegions()} />
@@ -278,6 +313,21 @@ export default async function ExplorePage({
           }
         />
       </div>
+
+      {/*
+        The explorer is where readers arrive without a subject in mind, so it is the page
+        most likely to end with one - and it had no way of handing them over. These follow
+        whatever the filters are currently set to, so a reader who has narrowed to one
+        sector or one country is offered that subject's own screens rather than a list.
+      */}
+      <RelatedViews
+        links={relatedLinks}
+        hint={
+          chosen || country
+            ? "Following the filters currently set above"
+            : "Pick a filter above and these follow it"
+        }
+      />
 
       <div className="mt-4">
         <ProvenanceBar meta={meta} extra={`${year} · ${matched.toLocaleString("en-US")} connections matched`} />

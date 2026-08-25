@@ -13,7 +13,17 @@ import {
   TriangleAlert,
   Users,
 } from "lucide-react";
-import { Crumb, ProvenanceBar, Warn } from "@/components/ui";
+import { ProvenanceBar, Warn } from "@/components/ui";
+import { PageHeader } from "@/components/page-header";
+import { RelatedViews } from "@/components/related-views";
+import {
+  TO_SOURCE,
+  toCorridor,
+  toCountry,
+  toExplore,
+  toOpportunities,
+  type RelatedLink,
+} from "@/lib/views";
 import { pct } from "@/lib/format";
 import { CountryFlag } from "@/components/country-flag";
 import { TARIFF_BAND_META } from "@/lib/palette";
@@ -94,19 +104,45 @@ export default async function TariffsPage({
 
   const steepest = [...rows].sort((a, b) => b.rate - a.rate).slice(0, 6);
 
+  /**
+   * Out of the schedule and back into trade. The corridor offered is the reporter's
+   * steepest partner, because that is the pair whose rate the reader is most likely to
+   * want to weigh against actual volumes.
+   */
+  const reporterName = country?.name ?? reporter;
+  const steepestPartner = steepest[0] ?? null;
+  const relatedLinks: RelatedLink[] = [
+    toCountry(reporter, reporterName),
+    steepestPartner
+      ? toCorridor(steepestPartner.iso3, reporter, steepestPartner.name, reporterName)
+      : null,
+    toOpportunities(reporter, reporterName),
+    toExplore(`?country=${reporter}&view=connections`, reporterName),
+    TO_SOURCE,
+  ].filter((link): link is RelatedLink => link !== null);
+
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-5 lg:px-6">
-      <Crumb items={[{ label: "Map", href: "/" }, { label: "Tariffs" }]} />
+      <PageHeader
+        crumb={[
+          { label: "Map", href: "/" },
+          { label: "Tariffs", href: "/tariffs" },
+          { label: country?.name ?? reporter },
+        ]}
+        view="tariffs"
+        title="Tariff explorer"
+        subject={<Percent className="h-5 w-5 text-ink-muted" aria-hidden />}
+        meta={
+          <>
+            Reporter{" "}
+            <span className="tabular font-medium text-ink-secondary">{reporter}</span> ·
+            every partner it publishes a rate for
+          </>
+        }
+        lede={`On this page the reporter is ${country?.name ?? reporter}: every rate below is what it charges, never what it pays. Pick a different reporter in the table controls.`}
+      />
 
       <div className="mt-2">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          <Percent className="h-5 w-5 text-ink-muted" aria-hidden />
-          Tariff explorer
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ink-secondary">
-          What {country?.name ?? reporter} charges its trading partners, as an effectively
-          applied simple average across all products.
-        </p>
         {/*
           The vintage sits with the rates, not only in the provenance strip at the foot of
           the page. A tariff is the figure on this site most likely to be read as "current"
@@ -263,6 +299,16 @@ export default async function TariffsPage({
           </div>
         </div>
       </div>
+
+      {/*
+        A rate is only half a decision - the other half is how much actually moves along
+        the corridor it applies to. This page had no route to that, so the steepest-rate
+        list read as a curiosity rather than as something to check against real trade.
+      */}
+      <RelatedViews
+        links={relatedLinks}
+        hint={`Same build, ${country?.name ?? reporter} beyond its schedule`}
+      />
 
       <div className="card mt-3 overflow-hidden">
         <ProvenanceBar

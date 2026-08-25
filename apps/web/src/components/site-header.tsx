@@ -70,10 +70,12 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   /**
-   * Below lg the search field collapses to a square icon button and opens as an overlay
+   * Below xl the search field collapses to a square icon button and opens as an overlay
    * across the header row. A text input cannot shrink below its intrinsic size, so an
    * inline one held the whole header wider than a phone viewport - which is what pushed
-   * the nav and the theme toggle off the right edge.
+   * the nav and the theme toggle off the right edge. The threshold is xl rather than lg
+   * so the five destination links can carry their labels from lg up; see the note on the
+   * nav below for why those labels win the contested space.
    */
   const [expanded, setExpanded] = useState(false);
   const [cursor, setCursor] = useState(0);
@@ -226,7 +228,7 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
         aria-label="Search countries or sectors"
         aria-expanded={expanded}
         title="Search countries or sectors"
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-hairline text-ink-secondary transition-colors hover:bg-raised hover:text-ink lg:hidden"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-hairline text-ink-secondary transition-colors hover:bg-raised hover:text-ink xl:hidden"
       >
         {navigating ? (
           <Loader2 className="h-4 w-4 animate-spin text-series-1" aria-hidden />
@@ -239,8 +241,8 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
         ref={boxRef}
         className={
           expanded
-            ? "absolute inset-x-2 top-2.5 z-30 sm:inset-x-3 lg:relative lg:inset-x-auto lg:top-auto lg:z-auto lg:max-w-sm lg:flex-1"
-            : "relative hidden min-w-0 lg:block lg:max-w-sm lg:flex-1"
+            ? "absolute inset-x-2 top-2.5 z-30 sm:inset-x-3 xl:relative xl:inset-x-auto xl:top-auto xl:z-auto xl:max-w-sm xl:flex-1"
+            : "relative hidden min-w-0 xl:block xl:max-w-sm xl:flex-1"
         }
       >
         {navigating ? (
@@ -269,11 +271,11 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
           aria-expanded={open && hits.length > 0}
           role="combobox"
           aria-controls="search-results"
-          className="h-9 w-full rounded-lg border border-hairline bg-surface pl-9 pr-10 text-sm shadow-sm transition-colors placeholder:text-ink-muted focus:border-series-1 focus:outline-none lg:pr-12 lg:shadow-none"
+          className="h-9 w-full rounded-lg border border-hairline bg-surface pl-9 pr-10 text-sm shadow-sm transition-colors placeholder:text-ink-muted focus:border-series-1 focus:outline-none xl:pr-12 xl:shadow-none"
         />
         {/* The shortcut hint is only true where a keyboard is; the close button is only
             needed where the field is an overlay covering the rest of the header. */}
-        <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-hairline px-1.5 py-0.5 text-2xs text-ink-muted lg:block">
+        <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-hairline px-1.5 py-0.5 text-2xs text-ink-muted xl:block">
           ⌘K
         </kbd>
         <button
@@ -287,7 +289,7 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
             setQuery("");
           }}
           aria-label="Close search"
-          className="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-raised hover:text-ink lg:hidden"
+          className="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-raised hover:text-ink xl:hidden"
         >
           <X className="h-3.5 w-3.5" aria-hidden />
         </button>
@@ -383,7 +385,7 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
                     href={href}
                     aria-current={active ? "page" : undefined}
                     title={label}
-                    className={`flex items-center gap-1.5 rounded-lg px-1.5 py-1.5 text-sm font-medium transition-colors sm:px-2 xl:px-3 ${
+                    className={`flex items-center gap-1.5 rounded-lg px-1.5 py-1.5 text-sm font-medium transition-colors sm:px-2 lg:px-3 ${
                       active
                         ? "bg-surface text-ink shadow-sm ring-1 ring-hairline"
                         : "text-ink-secondary hover:bg-raised hover:text-ink"
@@ -393,9 +395,14 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
                       className={`h-4 w-4 shrink-0 ${active ? "text-series-1" : ""}`}
                       aria-hidden
                     />
-                    {/* Labels wait for xl: at lg the search field is back inline, and
-                        five labelled links alongside it overflowed the row again. */}
-                    <span className="hidden xl:inline">{label}</span>
+                    {/* Labels appear from lg, and the search field now stays collapsed
+                        until xl to pay for them. That trade is deliberate: search already
+                        advertises itself with a magnifier glyph and a Cmd-K hint, while
+                        five bare destination icons advertise nothing at all - and on a
+                        touch device there is no hover title to fall back on. Between lg
+                        and xl the old arrangement showed a text field and five unlabelled
+                        icons, which is precisely backwards. */}
+                    <span className="hidden lg:inline">{label}</span>
                   </Link>
                 </li>
               );

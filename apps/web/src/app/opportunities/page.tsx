@@ -19,7 +19,18 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
-import { Crumb, Empty, ProvenanceBar, Warn } from "@/components/ui";
+import { Empty, ProvenanceBar, Warn } from "@/components/ui";
+import { PageHeader } from "@/components/page-header";
+import { RelatedViews } from "@/components/related-views";
+import {
+  TO_SOURCE,
+  toCorridor,
+  toCountry,
+  toExplore,
+  toSector,
+  toTariffs,
+  type RelatedLink,
+} from "@/lib/views";
 import { usd } from "@/lib/format";
 
 export const metadata = { title: "Trade opportunities - WorldTradeWeb" };
@@ -57,6 +68,24 @@ export default async function OpportunitiesPage({
   const topScore = results.length ? results[0].score : null;
 
   // "Show more" is a plain link so it is a real permalink and gets the route progress bar.
+  /**
+   * Where to take a card. Built from the top-scoring result rather than a fixed list, so
+   * the corridor and the destination named here are the ones the reader is looking at.
+   */
+  const best = results[0] ?? null;
+  const originName = country?.name ?? origin;
+  const relatedLinks: RelatedLink[] = [
+    best ? toCountry(best.destination, best.destinationName) : null,
+    best
+      ? toCorridor(origin, best.destination, originName, best.destinationName)
+      : null,
+    best ? toSector(best.sector, best.sectorName) : null,
+    best ? toTariffs(best.destination, best.destinationName, origin) : null,
+    toCountry(origin, originName),
+    toExplore(`?country=${origin}&view=connections`, originName),
+    TO_SOURCE,
+  ].filter((link): link is RelatedLink => link !== null);
+
   const moreParams = new URLSearchParams();
   if (sp.origin) moreParams.set("origin", origin);
   if (sector) moreParams.set("sector", sector);
@@ -65,19 +94,24 @@ export default async function OpportunitiesPage({
 
   return (
     <div className="mx-auto max-w-[1500px] px-4 py-5 lg:px-6">
-      <Crumb items={[{ label: "Map", href: "/" }, { label: "Opportunities" }]} />
-
-      <div className="mt-2">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          <Lightbulb className="h-5 w-5 text-ink-muted" aria-hidden />
-          Trade opportunities
-        </h1>
-        <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ink-secondary">
-          Markets where demand for a sector is large, the exporting country is
-          demonstrably capable of supplying it, and its current presence is small. Every
-          score shows its own arithmetic - open a card to see exactly which inputs drove it.
-        </p>
-      </div>
+      <PageHeader
+        crumb={[
+          { label: "Map", href: "/" },
+          { label: "Opportunities", href: "/opportunities" },
+          { label: country?.name ?? origin },
+        ]}
+        view="opportunities"
+        title="Trade opportunities"
+        subject={<Lightbulb className="h-5 w-5 text-ink-muted" aria-hidden />}
+        meta={
+          <>
+            Selling from{" "}
+            <span className="tabular font-medium text-ink-secondary">{origin}</span> ·
+            scored against every market that reports imports
+          </>
+        }
+        lede={`Every card is one sector in one destination, and every score shows its own arithmetic - open a card to see which inputs drove it. Nothing here is measured demand for ${country?.name ?? origin} specifically; it is a gap between what a market buys and what this country already sells it.`}
+      />
 
       <div className="mt-4">
         <OpportunityControls
@@ -250,17 +284,20 @@ export default async function OpportunitiesPage({
         </div>
       </div>
 
+      {/*
+        A card is a prompt to investigate, and investigating means leaving this page: the
+        destination's own profile, the corridor as it stands today, and what that
+        destination charges. Those three checks are the difference between a score and a
+        decision, and none of them was reachable from here.
+      */}
+      <RelatedViews
+        links={relatedLinks}
+        hint="Check a score against what the corridor already carries"
+      />
+
       <div className="card mt-3 overflow-hidden">
         <ProvenanceBar meta={meta} extra={`origin ${origin} · ${year}`} />
       </div>
-
-      <p className="mt-3 text-2xs text-ink-muted">
-        Looking for a specific corridor instead?{" "}
-        <Link href="/" className="text-series-1 hover:underline">
-          Start from the map
-        </Link>
-        .
-      </p>
     </div>
   );
 }

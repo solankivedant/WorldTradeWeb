@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeftRight, CalendarRange, Info, Pause, Play, Scale } from "lucide-react";
 import { divergingSteps, flowColors, sequentialSteps } from "@/lib/palette";
+import { MapIntroTrigger } from "@/components/map-intro";
 import { Segmented } from "@/components/segmented";
 import { useTheme } from "@/components/theme";
 import type { Provenance } from "@/lib/types";
@@ -24,6 +25,7 @@ export function MapFooter({
   hasFlows,
   meta,
   reportingCountries,
+  onShowGuide,
 }: {
   year: number;
   years: number[];
@@ -34,6 +36,11 @@ export function MapFooter({
   hasFlows: boolean;
   meta: Provenance;
   reportingCountries: number;
+  /**
+   * Reopens the orientation panel. Null until the intro hook has read localStorage - the
+   * button must not render on the server, where the stored state is unknowable.
+   */
+  onShowGuide: (() => void) | null;
 }) {
   const { resolved } = useTheme();
   const flow = flowColors(resolved);
@@ -89,6 +96,14 @@ export function MapFooter({
 
         {/* ---- year scrubber ---- */}
         <div className="flex min-w-0 flex-1 items-center gap-3">
+          {/*
+            The guide lives here rather than over the canvas because the canvas has no
+            free corner: the country panel opens top-left and drags anywhere, the sector
+            lens holds top-right, and the connection panel takes the whole right edge. A
+            help affordance that a panel can sit on top of is a help affordance nobody can
+            reach at the moment they need it.
+          */}
+          {onShowGuide && <MapIntroTrigger onShow={onShowGuide} />}
           <button
             onClick={() => setPlaying((p) => !p)}
             aria-label={playing ? "Pause year playback" : "Play through years"}
