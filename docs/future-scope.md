@@ -73,33 +73,73 @@ where an agreement is about to enter force. Rules of origin (does a product with
 imported content still qualify) are a much larger and more legalistic dataset, and the
 product must keep saying it displays rates rather than certifying classifications.
 
-### 2.5 Non-tariff measures (L)
+### 2.5 Non-tariff measures (L) - PARTLY SHIPPED, the inventory is BLOCKED
 
 For many products the binding constraint is not the duty - it is a sanitary certificate, a
-CE mark, or a quota. WTO I-TIP publishes NTM notifications. This is the single biggest
-"the number said go, reality said no" gap in the opportunity engine today.
+CE mark, or a quota. This remains the single biggest "the number said go, reality said no"
+gap in the opportunity engine.
 
-### 2.6 Services, FDI and remittances (L)
+**The NTM inventory is not publicly reachable.** Four routes were tried live and all four
+close: the WITS NTM SDMX endpoint returns 403, the WTO timeseries API returns 401 without a
+subscription key, UNCTADstat has no NTM report code, and TRAINS Online serves a browser
+application with no JSON behind it. Registering for a WTO API key is the unblock, and it is
+a decision for whoever owns the account, not something the pipeline can route around.
 
-PRD 4.2 lists these under the money-flow layer, and PRD 10 question 4 leaves open whether
-V1's "money flow" is goods-only. It is goods-only today. Services trade (the WTO-UNCTAD-ITC
-balanced dataset) would substantially change the picture for economies like India, Ireland
-and the Philippines, whose goods numbers understate them badly. Services have no HS codes
-and nothing like the bilateral coverage goods have, so this is a parallel data model, not a
-column added to the existing one.
+**What shipped instead:** the LPI customs-clearance sub-index, as the closest PUBLIC read
+on border friction. It is labelled on the page as a perception score and explicitly not an
+NTM count - it counts nobody's certificates, quotas or standards. Do not let it drift into
+being described as one.
 
-### 2.7 Freight cost and lead time (M, gated on licensing)
+### 2.6 Services, FDI and remittances (L) - SHIPPED, country level only
 
-PRD 4.2. Landed cost is tariff plus freight, and a 3% duty advantage disappears against a
-container rate. Public sources (UNCTAD LSCI, Drewry indices) are index-level, not
-corridor-level; corridor-level rates are commercial.
+Services trade, direct investment and remittances now ship from the World Bank WDI
+balance-of-payments series, on the country page and the mirror page. They run to 2024,
+a year ahead of the goods data.
 
-### 2.8 More context indicators (S each)
+Built as a parallel data model exactly as this section predicted: their own published file
+(`indicators.json`), their own access functions, their own page section, and a `basis` field
+on every series that the UI prints in words. Nothing adds them to a goods total, because
+balance-of-payments and customs are different measurement systems.
 
-GDP, population and the existing openness measures are in. Candidates that change what a
-screen can say: logistics performance index, governance and business-environment measures,
-and currency and inflation series for constant-dollar comparisons - every figure in the
-product is nominal USD today, which quietly overstates growth across a 13-year window.
+Still open: there is **no bilateral breakdown**. Who a country sells services TO is not in
+this source, so services cannot appear on a corridor page. The WTO-UNCTAD-ITC balanced
+services dataset is the next step if that matters.
+
+### 2.7 Freight cost and lead time (M) - PUBLIC PART SHIPPED, rates still unlicensed
+
+Landed cost is tariff plus freight, and a 3% duty advantage disappears against a container
+rate.
+
+**Shipped:** UNCTAD's Liner Shipping Connectivity Index (to 2021), container port throughput
+in TEU (to 2024), and median lead times to export and import (to 2018) - all country-level,
+all carrying their own year on the tile because those three frontiers are years apart.
+
+**Still not licensed:** corridor-level freight rates. Drewry, Xeneta and the rest are
+commercial. The page says plainly that connectivity describes a country's place in the
+network and not the cost of shipping anything, which is the honest limit of a public index.
+
+### 2.8 More context indicators (S each) - SHIPPED
+
+Twenty-two series now ship alongside GDP and population: the four Logistics Performance
+Index sub-scores, the four Worldwide Governance Indicators, the GDP deflator, CPI inflation,
+the exchange rate and real GDP growth.
+
+Three things worth knowing before touching them:
+
+- **The WGI codes moved.** `RL.EST`, `GE.EST` and the rest now live in "WDI Database
+  Archives" and return HTTP 200 with an error body, which looks exactly like a country that
+  does not report. The live codes are `GOV_WGI_<pillar>_EST`, and `&source=3` is rejected
+  outright so the archive is not reachable either.
+- **Doing Business is gone**, not frozen. `IC.EXP.TMBC*` and the ease-of-doing-business
+  score were withdrawn when the programme was discontinued in 2021.
+- **Two series carry `cross_country: false`.** The exchange rate and the GDP deflator are
+  real for one country over time and meaningless between countries - ranking exchange rates
+  puts the yen above the euro because a yen is worth less. Rank and median are suppressed
+  for them rather than computed, and a series whose good direction is undeclared gets no
+  rank at all.
+
+Deflating the nominal series is still open. The deflator is now published; nothing yet uses
+it to show a constant-dollar trade line.
 
 ## 3. New views and features
 

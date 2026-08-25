@@ -52,7 +52,7 @@ figures from World Bank WITS.
 | `/` | Full-bleed map: choropleth, continuous world wrap, metric switch in the header, year scrubber + legends in the footer. Selecting a country draws its directional flows and opens a floating draggable panel; clicking a flow opens a docked connection panel for that corridor |
 | `/explore` | World trade explorer - all 16 sectors at once, a filterable corridor list, and any two connections side by side |
 | `/country/[iso]` | Trade by sector and top partners, each showing **both directions on one row** |
-| `/country/[iso]` | KPI row, sector mix, top partners, 13-year series, tariff/concentration/openness |
+| `/country/[iso]` | KPI row, sector mix, top partners, 13-year series, tariff/concentration/openness, plus the context layer below |
 | `/corridor/[a]/[b]` | Both directions, **mirror-flow comparison**, corridor tariffs, sector overlap |
 | `/product/[code]` | Global market for one HS section group — top exporters/importers, HHI |
 | `/tariffs` | Applied rates a country charges every partner, sortable and searchable |
@@ -170,6 +170,44 @@ seller's would be FOB (pushes an estimated export figure UP). Read as a range, n
 The 8 with no partner records either are mostly territories counted inside a parent customs
 union (Monaco in France, Puerto Rico in the USA) - not missing data, and never a published zero.
 
+**The context layer is everything customs does not measure, and it is kept apart on
+purpose.** Twenty-two World Bank WDI series - services trade, FDI, remittances, the four
+LPI sub-scores, UNCTAD shipping connectivity, container throughput, lead times, the four
+governance estimates, deflator, inflation, exchange rate, real growth - ship in their own
+file (`indicators.json`), reached through their own functions (`indicatorsFor`,
+`indicatorFamilies`), and rendered by their own component (`components/country-context.tsx`)
+under a heading that says what they are not. **None of it may be added to a goods total.**
+Services are balance-of-payments data and goods are customs data: different agencies,
+different measurement systems, different aggregates. Every series carries a `basis` field
+for exactly this, and the page prints it in words.
+
+Three things about that layer that will otherwise bite:
+
+- **Every series has its own frontier year and they are years apart** - services and
+  governance reach 2024, goods stop at 2023, LPI at 2022, shipping connectivity at 2021,
+  lead times at 2018. The year is printed ON each figure, never inherited from the trade
+  data beside it, and a country behind its own series' frontier is told so.
+- **`cross_country: false` means rank and median are not computed at all.** The exchange
+  rate and the GDP deflator are real over time for one country and meaningless between
+  them; a series that does not declare which direction is good gets no rank either. Both
+  suppressions live in the published catalogue, not in a component.
+- **Direct investment is a NET flow and goes negative.** A negative side is never drawn as
+  a clamped bar - that printed `$0` beside a real figure of -$9.4B for Russia. Negative
+  rows render as stated signed values labelled "net withdrawal", with no bar.
+
+The catalogue - label, unit, basis, documented range, the explaining sentence - travels
+INSIDE `indicators.json`, for the same reason `codes` ships inside `bilateral_sectors.json`.
+`lib/indicators.ts` may decide how to render a unit and which glyph a family wears, and
+nothing more; it must never restate what a figure means.
+
+**No inventory of non-tariff measures is published, and that is a blocked source, not an
+oversight.** WITS's NTM endpoint returns 403, the WTO timeseries API returns 401 without a
+subscription key, UNCTADstat has no NTM report code and TRAINS Online is a browser app with
+no JSON - all verified live. The LPI customs-clearance score stands in as a labelled PUBLIC
+proxy for border friction and counts nobody's certificates or quotas. Do not let it get
+described as an NTM count. Corridor freight rates are commercial data and are not licensed;
+shipping connectivity is network position, not the cost of any route.
+
 **The sector lens narrows the flows, not just the choropleth.** A filter that repaints the
 map but leaves the arcs showing total trade says two different things on one screen, and
 the arcs are the louder of the two. When `?sector=` is set the arcs, the labels, the partner
@@ -251,6 +289,7 @@ pnpm typecheck
 
 # data pipeline — reference first, everything else depends on it
 pnpm data:reference                          # World Bank country + indicator reference
+pnpm data:context                            # World Bank context layer (22 series, skips if on disk)
 pnpm data:fetch  --vintage=2026-08-22        # WITS trade + tariffs (~1500 requests, ~12 min)
 pnpm data:build  --vintage=2026-08-22        # conform, validate, publish to data/processed/
 pnpm data:geo:prepare                        # fetch + simplify Natural Earth (slow, rarely rerun)

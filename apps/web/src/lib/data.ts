@@ -20,6 +20,10 @@ import type {
   CorridorRow,
   CorridorSectorRow,
   FigureSource,
+  IndicatorFamily,
+  IndicatorFile,
+  IndicatorReading,
+  IndicatorSpec,
   ProductRow,
   Provenance,
   SectorOverview,
@@ -160,6 +164,14 @@ interface Dataset {
   products: Record<string, { x?: ProductRow[]; m?: ProductRow[] }>;
   tariffs: Record<string, Record<string, number>>;
   context: Record<string, { gdp: Record<string, number>; population: Record<string, number> }>;
+  /**
+   * The context layer: services, investment, logistics, governance, prices.
+   *
+   * Its own file and its own field, never merged into `context` or `totals`. None of it
+   * is customs data, so a caller has to ask for it by name - the same rule mirror
+   * estimates live under, and for the same reason.
+   */
+  indicators: IndicatorFile;
   meta: Meta;
   /** exports keyed `${reporter}|${partner}` for O(1) corridor lookup */
   exportIndex: Map<string, number>;
@@ -285,6 +297,12 @@ export function dataset(): Dataset {
     products: read("products.json", {}),
     tariffs: read("tariffs.json", {}),
     context: read("context.json", {}),
+    indicators: read<IndicatorFile>("indicators.json", {
+      catalog: [],
+      families: {},
+      frontiers: {},
+      series: {},
+    }),
     meta,
     exportIndex,
     importIndex,
@@ -377,6 +395,140 @@ export function avgTariff(iso3: string): number | null {
 
 export function gdpFor(iso3: string, year: number): number | null {
   return dataset().context[iso3]?.gdp?.[String(year)] ?? null;
+}
+
+// ---------------------------------------------------------------- context layer
+
+/**
+ * Per-series distribution across every reporting country, computed once.
+ *
+ * A logistics score of 3.4 says nothing on its own - the reader has no idea whether the
+ * scale runs to 5 or to 500, or where the middle is. The median and the rank are what
+ * turn a number into a fact, and computing them per request would mean walking ~200
+ * countries on every page view.
+ *
+ * Each country is compared at ITS OWN newest year, not at a shared one. Half the series
+ * here are surveys that only run every few years, so pinning one year would silently
+ * drop every country that missed that round.
+ */
+interface IndicatorStats {
+  median: number | null;
+  /** iso3 -> rank, 1 = highest raw value. Direction is applied at the display edge. */
+  ranks: Map<string, number>;
+  reporting: number;
+}
+
+let indicatorStatsCache: Map<string, IndicatorStats> | null = null;
+
+function indicatorStats(): Map<string, IndicatorStats> {
+  if (indicatorStatsCache) return indicatorStatsCache;
+  const { indicators } = dataset();
+  const out = new Map<string, IndicatorStats>();
+
+  for (const spec of indicators.catalog) {
+    // A series the catalogue marks non-comparable gets no distribution at all. Computing
+    // one and leaving the UI to remember not to render it is how it eventually renders.
+    if (spec.cross_country === false) {
+      out.set(spec.key, { median: null, ranks: new Map(), reporting: 0 });
+      continue;
+    }
+    const latest: { iso: string; value: number }[] = [];
+    for (const [iso, byKey] of Object.entries(indicators.series)) {
+      const byYear = byKey[spec.key];
+      if (!byYear) continue;
+      const year = latestKey(byYear);
+      if (year === null) continue;
+      latest.push({ iso, value: byYear[year] });
+    }
+    latest.sort((a, b) => b.value - a.value);
+    const ranks = new Map<string, number>();
+    latest.forEach((row, i) => ranks.set(row.iso, i + 1));
+    const mid = Math.floor(latest.length / 2);
+    const median = latest.length
+      ? latest.length % 2
+        ? latest[mid].value
+        : (latest[mid - 1].value + latest[mid].value) / 2
+      : null;
+    out.set(spec.key, { median, ranks, reporting: latest.length });
+  }
+
+  indicatorStatsCache = out;
+  return out;
+}
+
+/** Newest year key in a `{year: value}` map, as a string, or null if empty. */
+function latestKey(byYear: Record<string, number>): string | null {
+  let best: string | null = null;
+  for (const year of Object.keys(byYear)) {
+    if (best === null || Number(year) > Number(best)) best = year;
+  }
+  return best;
+}
+
+export function indicatorFamilies(): { id: string; label: string; blurb: string }[] {
+  const { indicators } = dataset();
+  // Ordered by the catalogue, so the families appear in the order the connector
+  // declares them rather than in whatever order the JSON object happens to enumerate.
+  const seen: string[] = [];
+  for (const spec of indicators.catalog) {
+    if (!seen.includes(spec.family)) seen.push(spec.family);
+  }
+  return seen.map((id) => {
+    const family: IndicatorFamily = indicators.families[id] ?? { label: id, blurb: "" };
+    return { id, label: family.label, blurb: family.blurb };
+  });
+}
+
+/**
+ * Every context reading a country has, grouped by family and in catalogue order.
+ *
+ * A series the country does not report is simply absent - it never appears as a zero.
+ * Callers get the newest year the COUNTRY has, plus the newest year the SERIES has, so
+ * a screen can say "2018" beside a lead time sitting next to a 2023 trade figure.
+ */
+export function indicatorsFor(iso3: string): Record<string, IndicatorReading[]> {
+  const { indicators } = dataset();
+  const byKey = indicators.series[iso3];
+  if (!byKey) return {};
+  const stats = indicatorStats();
+  const out: Record<string, IndicatorReading[]> = {};
+
+  for (const spec of indicators.catalog) {
+    const byYear = byKey[spec.key];
+    if (!byYear) continue;
+    const year = latestKey(byYear);
+    if (year === null) continue;
+    const stat = stats.get(spec.key);
+    const history = Object.entries(byYear)
+      .map(([y, value]) => ({ year: Number(y), value }))
+      .sort((a, b) => a.year - b.year);
+
+    (out[spec.family] ??= []).push({
+      spec,
+      year: Number(year),
+      value: byYear[year],
+      frontier: indicators.frontiers[spec.key] ?? null,
+      median: stat?.median ?? null,
+      rank: stat?.ranks.get(iso3) ?? null,
+      reporting: stat?.reporting ?? 0,
+      history,
+    });
+  }
+
+  return out;
+}
+
+/** One reading, for callers that want a single series rather than a whole family. */
+export function indicatorFor(iso3: string, key: string): IndicatorReading | null {
+  for (const readings of Object.values(indicatorsFor(iso3))) {
+    const hit = readings.find((r) => r.spec.key === key);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+export function indicatorCatalog(): IndicatorSpec[] {
+  return dataset().indicators.catalog;
 }
 
 /** World total exports for a year, summed over reporting countries only. */

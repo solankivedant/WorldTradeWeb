@@ -130,7 +130,14 @@ An interactive world map where every country, corridor, and product is clickable
 | WTO Tariff Download Facility | MFN and bound tariff schedules | Annual | Authoritative for MFN rates |
 | IMF DOTS | Direction of trade, aggregates | Quarterly | Good for balance sanity checks |
 | World Bank WDI | GDP, population, context | Annual | Normalization denominators |
+| World Bank WDI - services and BoP | Services trade, FDI, remittances | Annual, to 2024 | **In use.** Balance-of-payments basis, never summed with the customs goods figures |
+| World Bank WDI - LPI | Logistics, customs efficiency, infrastructure, timeliness | Every 2-4 years, to 2022 | **In use.** Survey of freight forwarders; ordinal, not a measurement |
+| UNCTAD LSCI via WDI | Liner shipping connectivity | Annual, to 2021 | **In use.** Network position, not a freight rate |
+| World Bank WGI via WDI | Rule of law, effectiveness, regulation, corruption | Annual, to 2024 | **In use.** Live codes are `GOV_WGI_*_EST`; the old `RL.EST` family is archived and returns an error body |
+| World Bank WDI - prices | Deflator, CPI inflation, exchange rate, real growth | Annual, to 2024 | **In use.** Every trade figure on the site is nominal USD; these separate growth from price |
 | Natural Earth / geoBoundaries | Country geometry | Static | Simplified topology for map performance |
+| WTO I-TIP / UNCTAD TRAINS | Non-tariff measure inventory | Irregular | **Blocked.** WITS NTM endpoint 403s, the WTO timeseries API needs a subscription key, TRAINS Online has no public JSON. Customs efficiency stands in as a labelled proxy |
+| Drewry / Xeneta and similar | Corridor freight rates and lead times | Weekly | **Not licensed.** Corridor-level rates are commercial; only country-level public indices are carried |
 | OEC | Complexity indices | Annual | Methodology reference |
 
 ## 9. Risks

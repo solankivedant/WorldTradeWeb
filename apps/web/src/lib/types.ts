@@ -188,3 +188,64 @@ export interface ScoreComponent {
   max: number;
   reason: string;
 }
+
+/**
+ * One series in the context layer - the things a customs record does not measure.
+ *
+ * `basis` is the field that stops these being read as trade. A services figure is
+ * BALANCE-OF-PAYMENTS data, a logistics score is a SURVEY of forwarders' perceptions,
+ * a governance estimate is a COMPOSITE of many sources. None of them may be added to a
+ * goods total, and a screen that shows one beside a goods figure has to say which is
+ * which.
+ *
+ * Shape mirrors `indicators.json` exactly, whose catalogue travels with its own data for
+ * the same reason `codes` ships inside bilateral_sectors.json: a label held somewhere
+ * else drifts, and then every figure is quietly mislabelled.
+ */
+export interface IndicatorSpec {
+  key: string;
+  /** The source's own indicator code, so any figure can be re-fetched and checked. */
+  code: string;
+  family: string;
+  label: string;
+  unit: "usd" | "teu" | "days" | "index" | "score" | "percent" | "lcu-per-usd";
+  basis: string;
+  note: string;
+  range?: [number, number];
+  higher_is_better?: boolean | null;
+  /**
+   * False for a series that is real over time for ONE country and meaningless between
+   * them - the exchange rate, the GDP deflator. Rank and median are suppressed for
+   * these rather than computed and shown, because both would be inventions.
+   */
+  cross_country?: boolean;
+}
+
+export interface IndicatorFamily {
+  label: string;
+  blurb: string;
+}
+
+export interface IndicatorFile {
+  catalog: IndicatorSpec[];
+  families: Record<string, IndicatorFamily>;
+  /** Newest year each series publishes for anyone. They do not agree with each other. */
+  frontiers: Record<string, number>;
+  series: Record<string, Record<string, Record<string, number>>>;
+}
+
+/** One country's reading of one series, with everything a caller needs to label it. */
+export interface IndicatorReading {
+  spec: IndicatorSpec;
+  /** The newest year THIS country has. Not the same as the series frontier. */
+  year: number;
+  value: number;
+  /** Newest year anyone has, so a country lagging the source reads as lagging. */
+  frontier: number | null;
+  /** Median across every country at that country's own newest year, for context. */
+  median: number | null;
+  /** This country's rank among countries reporting the series, 1 = highest value. */
+  rank: number | null;
+  reporting: number;
+  history: { year: number; value: number }[];
+}

@@ -13,7 +13,8 @@ import { SectorCompare } from "@/components/charts/sector-compare";
 import { PartnerCompare } from "@/components/charts/partner-compare";
 import { pct, share, usd } from "@/lib/format";
 import type { MirrorEstimate } from "@/lib/data";
-import type { Country, PartnerRow, Provenance } from "@/lib/types";
+import type { Country, IndicatorReading, PartnerRow, Provenance } from "@/lib/types";
+import { CountryContext } from "@/components/country-context";
 import type { PartnerPair } from "@/lib/pairing";
 
 /**
@@ -42,12 +43,16 @@ export function MirrorCountry({
   partners,
   meta,
   worldTotal,
+  families,
+  readings,
 }: {
   country: Country;
   estimate: MirrorEstimate;
   partners: PartnerPair[];
   meta: Provenance;
   worldTotal: number;
+  families: { id: string; label: string; blurb: string }[];
+  readings: Record<string, IndicatorReading[]>;
 }) {
   const balance =
     estimate.exports !== null && estimate.imports !== null
@@ -191,6 +196,22 @@ export function MirrorCountry({
           </div>
         </Card>
       </div>
+
+      {/*
+        Reported, on a page where everything above it is estimated.
+
+        These economies file no CUSTOMS return, which is why their goods figures had to be
+        rebuilt from partner records. Most of them do still file a balance of payments, so
+        the services and financial flows here are the country's own published numbers -
+        the only measured trade figures on the page. That distinction is stated in the
+        section, not left for the reader to infer from where it sits.
+      */}
+      <CountryContext
+        families={families}
+        readings={readings}
+        countryName={country.name}
+        reportedNote={`These are ${country.name}'s own published figures. Unlike the goods estimates above, nothing here is rebuilt from partner records - the economies on this page file no customs return but most still file a balance of payments.`}
+      />
 
       <div className="mt-4">
         <ProvenanceBar

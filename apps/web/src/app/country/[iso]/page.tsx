@@ -16,6 +16,8 @@ import {
   exportRank,
   gdpFor,
   getCountry,
+  indicatorFamilies,
+  indicatorsFor,
   latestYear,
   mirrorFor,
   mirrorPartners,
@@ -36,6 +38,7 @@ import { TopSectors } from "@/components/top-sectors";
 import { growth, pct, share, usd } from "@/lib/format";
 import { CountryFlag } from "@/components/country-flag";
 import { MirrorCountry, toMirrorPairs } from "@/components/mirror-country";
+import { CountryContext } from "@/components/country-context";
 
 export async function generateMetadata({ params }: { params: Promise<{ iso: string }> }) {
   const { iso } = await params;
@@ -130,6 +133,8 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
           partners={toMirrorPairs(named(mirrored.exports), named(mirrored.imports))}
           meta={meta}
           worldTotal={worldTotal}
+          families={indicatorFamilies()}
+          readings={indicatorsFor(country.iso3)}
         />
       );
     }
@@ -326,6 +331,12 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
           </div>
         </Card>
       </div>
+
+      <CountryContext
+        families={indicatorFamilies()}
+        readings={indicatorsFor(country.iso3)}
+        countryName={country.name}
+      />
 
       <div className="card mt-3 overflow-hidden">
         <ProvenanceBar meta={meta} extra={`${country.name} · ${year}`} />

@@ -477,6 +477,8 @@ def build(vintage: str) -> dict:
         if iso in indicators
     }
 
+    context_layer = conform_context(valid_iso, stats)
+
     return {
         "countries": countries,
         "totals": totals,
@@ -492,8 +494,108 @@ def build(vintage: str) -> dict:
         "tariff_years_seen": dict(tariff_years),
         "tariff_year_requested": tariff_year_requested,
         "context": context,
+        "indicators": context_layer,
         "stats": stats,
         "reconcile_failures": [],
+    }
+
+
+# ------------------------------------------------------- conform: context layer
+
+# How many decimals each unit keeps. Money to the dollar: a services figure carrying
+# fourteen significant digits is false precision and costs a third of the file.
+UNIT_PRECISION = {
+    "usd": 0,
+    "teu": 0,
+    "days": 1,
+    "index": 4,
+    "score": 4,
+    "percent": 3,
+    "lcu-per-usd": 4,
+}
+
+
+def conform_context(valid_iso: set[str], stats: dict) -> dict:
+    """Map the World Bank context layer onto our country set and our own keys.
+
+    The catalogue travels with the data, exactly as `codes` does inside
+    bilateral_sectors.json. A published figure and the sentence explaining what it
+    measures must not be able to drift apart, and they will the moment the meaning lives
+    in a constant somewhere else in the repo.
+
+    Everything here is COUNTRY-level and none of it is customs data. It is published to
+    its own file, keyed by its own names, so nothing can pick up a services figure while
+    reaching for goods.
+    """
+    path = RAW / "worldbank" / "context.json"
+    if not path.exists():
+        print("  no raw context layer -- run: python data/etl/connectors/worldbank.py --context-only")
+        return {"catalog": [], "families": {}, "series": {}, "frontiers": {}}
+
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    catalog = raw.get("catalog", [])
+    by_code = {spec["code"]: spec for spec in catalog}
+
+    series: dict[str, dict[str, dict[str, float]]] = defaultdict(dict)
+    frontiers: dict[str, int] = {}
+    dropped_entities: dict[str, int] = defaultdict(int)
+    kept_values = 0
+
+    for code, by_iso in raw.get("series", {}).items():
+        spec = by_code.get(code)
+        if spec is None:
+            # A code in the data with no catalogue entry is a figure nobody can label.
+            stats["context_codes_uncatalogued"] = stats.get("context_codes_uncatalogued", 0) + 1
+            print(f"  !! context: {code} has no catalogue entry, dropped")
+            continue
+        key = spec["key"]
+        digits = UNIT_PRECISION.get(spec["unit"], 4)
+        newest: int | None = None
+
+        for iso_raw, by_year in by_iso.items():
+            # The World Bank emits modern ISO3, but normalize anyway: the day it emits a
+            # superseded code is the day six countries quietly lose their context.
+            iso = LEGACY_ISO3.get(iso_raw.upper(), iso_raw.upper())
+            if iso not in valid_iso:
+                # Aggregates ("World", "Euro area", "Low income") and territories outside
+                # the reference table. Counted, never silently dropped.
+                dropped_entities[iso] += 1
+                continue
+            clean = {}
+            for year, value in by_year.items():
+                if value is None:
+                    continue  # not reported stays absent; it is not a zero
+                rounded = round(float(value), digits)
+                clean[year] = int(rounded) if digits == 0 else rounded
+                year_int = int(year)
+                if newest is None or year_int > newest:
+                    newest = year_int
+            if clean:
+                series[iso][key] = clean
+                kept_values += len(clean)
+
+        if newest is not None:
+            frontiers[key] = newest
+
+    stats["context_series"] = len(catalog)
+    stats["context_values"] = kept_values
+    stats["context_countries"] = len(series)
+    stats["context_entities_dropped"] = sum(dropped_entities.values())
+    if dropped_entities:
+        top = sorted(dropped_entities.items(), key=lambda kv: -kv[1])[:8]
+        print(
+            f"  context: dropped {len(dropped_entities)} non-country entities "
+            f"({stats['context_entities_dropped']} series-values), e.g. "
+            + ", ".join(f"{iso}x{n}" for iso, n in top)
+        )
+
+    return {
+        "catalog": catalog,
+        "families": raw.get("families", {}),
+        # Each series' own newest year. They disagree by up to six years, and a reader
+        # who assumes one shared frontier will read a 2018 lead time as current.
+        "frontiers": frontiers,
+        "series": dict(series),
     }
 
 
@@ -649,6 +751,66 @@ def validate(data: dict) -> list[str]:
         elif not (lo <= value <= hi):
             problems.append(f"anchor {iso} {latest} exports ${value:,.0f} outside expected ${lo:,.0f}-${hi:,.0f}")
 
+    problems.extend(validate_context(data["indicators"]))
+
+    return problems
+
+
+# Figures checkable against a published World Bank country page. Ranges are wide enough
+# to survive a revision and narrow enough to catch a units error, which is the failure
+# mode that matters: a remittance figure off by 1000x looks entirely plausible.
+CONTEXT_ANCHORS = [
+    ("IND", "remittances_in", 1.0e11, 1.5e11, "India is the largest remittance recipient, ~$120-140B"),
+    ("IND", "services_exports", 2.5e11, 4.5e11, "India services exports ~$340-380B"),
+    ("USA", "services_exports", 8.0e11, 1.3e12, "USA services exports ~$1.0T"),
+    ("SGP", "shipping_connectivity", 80.0, 200.0, "Singapore is the top-connected port"),
+    ("DEU", "lpi_overall", 3.5, 5.0, "Germany scores at the top of the LPI"),
+]
+
+
+def validate_context(layer: dict) -> list[str]:
+    """Range checks on the context layer. Types are the easy half; units are the bugs."""
+    problems: list[str] = []
+    catalog = layer.get("catalog", [])
+    series = layer.get("series", {})
+    if not catalog:
+        # Not fatal - a build from a vintage fetched before this layer existed is still
+        # a valid build. It just publishes an empty layer, and the UI shows nothing.
+        return problems
+
+    if len(series) < 150:
+        problems.append(f"context layer covers only {len(series)} countries -- fetch looks truncated")
+
+    by_key = {spec["key"]: spec for spec in catalog}
+    for iso, values in series.items():
+        for key, by_year in values.items():
+            spec = by_key.get(key)
+            if spec is None:
+                problems.append(f"context {iso}/{key}: no catalogue entry")
+                continue
+            lo, hi = spec.get("range", (None, None)) if spec.get("range") else (None, None)
+            for year, value in by_year.items():
+                if not (2000 <= int(year) <= 2035):
+                    problems.append(f"context {iso}/{key}: year {year} out of range")
+                if lo is not None and not (lo <= value <= hi):
+                    problems.append(f"context {iso}/{key}/{year}: {value} outside documented range {lo}..{hi}")
+                # FDI and remittances are net flows and legitimately go negative;
+                # a negative services export or port throughput is a units bug.
+                if spec["unit"] in ("usd", "teu") and value < 0 and spec["family"] == "services":
+                    problems.append(f"context {iso}/{key}/{year}: negative {spec['unit']} value {value}")
+
+    for iso, key, lo, hi, why in CONTEXT_ANCHORS:
+        by_year = series.get(iso, {}).get(key)
+        if not by_year:
+            problems.append(f"context anchor {iso}/{key} missing ({why})")
+            continue
+        latest = max(by_year)
+        value = by_year[latest]
+        if not (lo <= value <= hi):
+            problems.append(
+                f"context anchor {iso}/{key} {latest} = {value:,.2f}, expected {lo:,.0f}..{hi:,.0f} ({why})"
+            )
+
     return problems
 
 
@@ -697,6 +859,10 @@ def publish(data: dict, vintage: str) -> None:
     write("products.json", data["products"])
     write("tariffs.json", data["tariffs"])
     write("context.json", data["context"])
+    # The context layer ships with its own catalogue, its own per-series frontier years
+    # and its own file. None of it is customs data and none of it may be added to a goods
+    # total, which is easiest to guarantee by never putting it in the same payload.
+    write("indicators.json", data["indicators"])
 
     meta = {
         "vintage": vintage,
@@ -718,10 +884,27 @@ def publish(data: dict, vintage: str) -> None:
                 "url": "https://data.worldbank.org/",
                 "license": "CC-BY-4.0",
             },
+            {
+                "name": "World Bank WDI context layer",
+                "datasets": [
+                    "services trade (BoP)",
+                    "FDI and remittances (BoP)",
+                    "Logistics Performance Index",
+                    "UNCTAD Liner Shipping Connectivity Index",
+                    "Worldwide Governance Indicators",
+                    "prices, deflator and exchange rate",
+                ],
+                "url": "https://data.worldbank.org/",
+                "license": "CC-BY-4.0",
+            },
         ],
         "units": {
             "trade_values": "USD (converted from WITS thousands-USD at conform)",
             "tariffs": "percent, effectively applied, simple average",
+            "context_layer": (
+                "each series carries its own unit and basis in indicators.json; money is "
+                "USD, indices and scores keep the source's scale"
+            ),
         },
         "caveats": [
             "WITS product groups are HS-section aggregates, not HS-6 lines. HS-6 drill-down requires UN Comtrade.",
@@ -732,6 +915,11 @@ def publish(data: dict, vintage: str) -> None:
             "Tariff figures are simple averages across products and hide wide dispersion within a partner relationship.",
             "Absent data means not reported, not zero. The two are kept distinct throughout.",
             "61 economies file no trade report at all (Russia, Iraq, Bangladesh, Algeria and others). Their figures in mirror.json are rebuilt from partner reports and are estimates, labelled as such wherever shown, and never merged into the reported totals.",
+            "Services, investment and remittance figures are balance-of-payments data, a different measurement basis from the customs records behind every goods figure. They are never added to goods trade, and no bilateral breakdown of them exists at this tier.",
+            "Context series run to different newest years than the goods data: services and governance reach 2024, goods stop at 2023, logistics scores at 2022, shipping connectivity at 2021 and lead times at 2018. Each figure is shown with the year it belongs to.",
+            "Logistics and lead-time scores are surveys of freight forwarders' perceptions, and governance scores are composites of many underlying sources. Both are ordinal reads, not measurements, and small differences between countries are not meaningful.",
+            "No inventory of non-tariff measures is published here. The WTO I-TIP and UNCTAD TRAINS NTM datasets are not publicly reachable without credentials, so the customs-efficiency score stands in as a proxy for border friction and counts nobody's certificates, quotas or standards.",
+            "Corridor-level freight rates are commercial data this project does not license. Shipping connectivity and port throughput describe a country's position in the network, not the cost of any particular route.",
         ],
         "stats": data["stats"],
         "reconciliation_warnings": data.get("reconcile_failures", []),

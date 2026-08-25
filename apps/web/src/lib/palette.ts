@@ -374,3 +374,39 @@ export function tariffBandFor(rate: number, mode: Mode): TariffBand {
   const bands = tariffBands(mode);
   return bands.find((b) => rate < b.max) ?? bands[bands.length - 1];
 }
+
+/**
+ * The context layer's two meters.
+ *
+ * Two different jobs, so two different rules, and neither is a categorical palette:
+ *
+ *   `fill` paints a bounded score on a 0-to-full track (the logistics indices, 1-5).
+ *   Magnitude is carried by LENGTH against a shared baseline, so the fill is one hue at
+ *   one step - a ramp along the bar would encode the same fact twice and imply the
+ *   colour meant something the length did not.
+ *
+ *   `positive` / `negative` paint a governance estimate, which diverges around a REAL
+ *   neutral point: the WGI is constructed so the world average sits at 0. The bar grows
+ *   out of the centre and the unfilled track is the neutral midpoint, which is why there
+ *   is no third colour here - a hue at the midpoint would make "average" a state worth
+ *   flagging.
+ *
+ * Deliberately NOT the green/red flow pair. That pair is the app-wide identity for trade
+ * DIRECTION, and a reader who meets it on a governance score has to relearn it. Blue and
+ * red are already what this product uses for "above and below a neutral line" on the
+ * map's balance metric.
+ *
+ * Each mode's values were measured against the CARD surface, which is what these are
+ * drawn on - not the plane. Both pairs clear every categorical check there:
+ *   light  #d03b3b,#2a78d6 on #fcfcfb — CVD dE 23.8 deutan/protan, normal 31.6
+ *   dark   #e66767,#2a78d6 on #1a1a19 — CVD dE 18.5 protan, normal 30.2
+ * Re-run `validate_palette.js --mode <mode> --surface <card>` if either is touched.
+ */
+const CONTEXT_METER = {
+  light: { fill: "#1c5cab", positive: "#2a78d6", negative: "#d03b3b" },
+  dark: { fill: "#5598e7", positive: "#2a78d6", negative: "#e66767" },
+} as const;
+
+export function contextMeter(mode: Mode): { fill: string; positive: string; negative: string } {
+  return CONTEXT_METER[mode];
+}

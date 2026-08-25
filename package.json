@@ -10,6 +10,7 @@
     "typecheck": "pnpm --filter @tradecenter/web typecheck",
     "lint": "pnpm --filter @tradecenter/web lint",
     "data:reference": "python data/etl/connectors/worldbank.py",
+    "data:context": "python data/etl/connectors/worldbank.py --context-only",
     "data:fetch": "python data/etl/connectors/wits.py --vintage $npm_config_vintage",
     "data:build": "python -m data.etl.pipelines.build --vintage $npm_config_vintage",
     "data:geo": "node data/etl/pipelines/geo.mjs",
