@@ -125,8 +125,13 @@
 }
 
 @layer components {
+  /* `min-w-0` is part of the card, not a per-caller decision. A card is almost always a
+     grid or flex item, and such an item's automatic minimum size is its CONTENT's
+     min-content width - so one `truncate` line or one two-column split inside a card
+     widened its whole track past the viewport, and the page scrolled sideways. The
+     scroll belongs to the table or chart that is genuinely too wide, not to the page. */
   .card {
-    @apply rounded-xl border border-hairline bg-surface;
+    @apply min-w-0 rounded-xl border border-hairline bg-surface;
   }
 
   /* Floating surfaces sit above the map, so they need a real shadow to separate from it

@@ -14,6 +14,7 @@ import {
   Scale,
   Search,
   Database,
+  X,
 } from "lucide-react";
 
 import { CountryFlag } from "@/components/country-flag";
@@ -68,9 +69,17 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  /**
+   * Below lg the search field collapses to a square icon button and opens as an overlay
+   * across the header row. A text input cannot shrink below its intrinsic size, so an
+   * inline one held the whole header wider than a phone viewport - which is what pushed
+   * the nav and the theme toggle off the right edge.
+   */
+  const [expanded, setExpanded] = useState(false);
   const [cursor, setCursor] = useState(0);
   const [navigating, startNavigation] = useTransition();
   const boxRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onMap = pathname === "/";
@@ -101,15 +110,26 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
 
   useEffect(() => setCursor(0), [query]);
 
+  // The collapsed field is not in the DOM until it expands, so focus has to wait a render.
+  useEffect(() => {
+    if (expanded) inputRef.current?.focus();
+  }, [expanded]);
+
   useEffect(() => {
     function onClick(event: MouseEvent) {
-      if (boxRef.current && !boxRef.current.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      // The trigger is outside the box: without this it would close on mousedown and
+      // reopen on click, so the overlay could never be opened by tapping the button.
+      if (boxRef.current?.contains(target) || triggerRef.current?.contains(target)) return;
+      setOpen(false);
+      setExpanded(false);
     }
     function onKey(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key === "k") {
         event.preventDefault();
-        inputRef.current?.focus();
+        setExpanded(true);
         setOpen(true);
+        inputRef.current?.focus();
       }
     }
     document.addEventListener("mousedown", onClick);
@@ -128,6 +148,7 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
   const go = useCallback(
     (hit: Hit) => {
       setOpen(false);
+      setExpanded(false);
       setQuery("");
       startRouteProgress();
       startNavigation(() => {
@@ -144,6 +165,11 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
   );
 
   function onKeyDown(event: React.KeyboardEvent) {
+    if (event.key === "Escape") {
+      setOpen(false);
+      setExpanded(false);
+      return;
+    }
     if (!hits.length) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
@@ -154,8 +180,6 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
     } else if (event.key === "Enter") {
       event.preventDefault();
       go(hits[cursor]);
-    } else if (event.key === "Escape") {
-      setOpen(false);
     }
   }
 
@@ -168,7 +192,9 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
   }
 
   return (
-    <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-3 border-b border-hairline bg-plane/95 px-3 backdrop-blur lg:gap-4 lg:px-4">
+    // Already `sticky`, which is a containing block for absolute children - that is what
+    // the collapsed search overlay anchors to when it lies across the whole row.
+    <header className="sticky top-0 z-50 flex h-14 shrink-0 items-center gap-2 border-b border-hairline bg-plane/95 px-2 backdrop-blur sm:px-3 lg:gap-3 lg:px-4">
       <Link href="/" className="flex shrink-0 items-center gap-2">
         {/* Sized up alongside the wordmark - a 28px badge read as an afterthought next to
             20px type once the name grew. */}
@@ -176,14 +202,47 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
           <Globe2 className="h-[18px] w-[18px] text-series-1" aria-hidden />
         </span>
         {/* Hidden below sm: the name is long enough that on a phone it would crowd out
-            the search field, which is the header's actual working control. */}
+            the controls, and the badge alone already links home. */}
         <span className="hidden text-lg font-semibold tracking-tight sm:block lg:text-xl">
           WorldTradeWeb
         </span>
       </Link>
 
-      {/* ---- search ---- */}
-      <div ref={boxRef} className="relative max-w-sm flex-1">
+      {/*
+        ---- search ----
+        Two shapes, one control. Below lg it is a square icon button the same size as the
+        theme toggle beside it, because an inline text field has an intrinsic minimum
+        width it will not shrink past - that was what made the header wider than the
+        viewport and pushed the nav and the toggle off the right edge. Tapping it expands
+        the field across the row; at lg and up the field is simply always there.
+      */}
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => {
+          setExpanded(true);
+          setOpen(true);
+        }}
+        aria-label="Search countries or sectors"
+        aria-expanded={expanded}
+        title="Search countries or sectors"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-hairline text-ink-secondary transition-colors hover:bg-raised hover:text-ink lg:hidden"
+      >
+        {navigating ? (
+          <Loader2 className="h-4 w-4 animate-spin text-series-1" aria-hidden />
+        ) : (
+          <Search className="h-4 w-4" aria-hidden />
+        )}
+      </button>
+
+      <div
+        ref={boxRef}
+        className={
+          expanded
+            ? "absolute inset-x-2 top-2.5 z-30 sm:inset-x-3 lg:relative lg:inset-x-auto lg:top-auto lg:z-auto lg:max-w-sm lg:flex-1"
+            : "relative hidden min-w-0 lg:block lg:max-w-sm lg:flex-1"
+        }
+      >
         {navigating ? (
           <Loader2
             className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-series-1"
@@ -210,11 +269,28 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
           aria-expanded={open && hits.length > 0}
           role="combobox"
           aria-controls="search-results"
-          className="h-9 w-full rounded-lg border border-hairline bg-surface pl-9 pr-12 text-sm transition-colors placeholder:text-ink-muted focus:border-series-1 focus:outline-none"
+          className="h-9 w-full rounded-lg border border-hairline bg-surface pl-9 pr-10 text-sm shadow-sm transition-colors placeholder:text-ink-muted focus:border-series-1 focus:outline-none lg:pr-12 lg:shadow-none"
         />
-        <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-hairline px-1.5 py-0.5 text-2xs text-ink-muted sm:block">
+        {/* The shortcut hint is only true where a keyboard is; the close button is only
+            needed where the field is an overlay covering the rest of the header. */}
+        <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-hairline px-1.5 py-0.5 text-2xs text-ink-muted lg:block">
           ⌘K
         </kbd>
+        <button
+          type="button"
+          onClick={() => {
+            // Dismissing the overlay drops the query with it. Reopening a field that is
+            // gone from the screen and finding half of an old search still in it is the
+            // kind of state that produces "no results" for no visible reason.
+            setExpanded(false);
+            setOpen(false);
+            setQuery("");
+          }}
+          aria-label="Close search"
+          className="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-raised hover:text-ink lg:hidden"
+        >
+          <X className="h-3.5 w-3.5" aria-hidden />
+        </button>
 
         {open && hits.length > 0 && (
           <ul
@@ -294,11 +370,11 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
         never get a frame to render in. The top progress bar and the route skeleton do
         that job.
       */}
-      <div className="ml-auto flex shrink-0 items-center gap-2 lg:gap-3">
+      <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-3">
         <span className="hidden h-6 w-px bg-hairline sm:block" aria-hidden />
 
         <nav aria-label="Sections">
-          <ul className="flex items-center gap-1 rounded-xl border border-hairline bg-plane p-1">
+          <ul className="flex items-center gap-0.5 rounded-xl border border-hairline bg-plane p-1 sm:gap-1">
             {NAV.map(({ href, label, Icon }) => {
               const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
               return (
@@ -307,7 +383,7 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
                     href={href}
                     aria-current={active ? "page" : undefined}
                     title={label}
-                    className={`flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors lg:px-3 ${
+                    className={`flex items-center gap-1.5 rounded-lg px-1.5 py-1.5 text-sm font-medium transition-colors sm:px-2 xl:px-3 ${
                       active
                         ? "bg-surface text-ink shadow-sm ring-1 ring-hairline"
                         : "text-ink-secondary hover:bg-raised hover:text-ink"
@@ -317,7 +393,9 @@ export function SiteHeader({ countries }: { countries: CountryRef[] }) {
                       className={`h-4 w-4 shrink-0 ${active ? "text-series-1" : ""}`}
                       aria-hidden
                     />
-                    <span className="hidden lg:inline">{label}</span>
+                    {/* Labels wait for xl: at lg the search field is back inline, and
+                        five labelled links alongside it overflowed the row again. */}
+                    <span className="hidden xl:inline">{label}</span>
                   </Link>
                 </li>
               );

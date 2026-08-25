@@ -36,38 +36,45 @@ export function TariffBands({ bands, total }: { bands: RateBand[]; total: number
   const max = Math.max(...bands.map((b) => b.count), 1);
 
   return (
-    <div>
-      <div className="flex h-40 items-end gap-2">
-        {bands.map((band) => {
-          const pctOfTotal = total > 0 ? (band.count / total) * 100 : 0;
-          return (
-            <div key={band.label} className="flex h-full flex-1 flex-col justify-end gap-1.5">
-              <div className="tabular text-center text-xs font-medium text-ink">{band.count}</div>
-              <div
-                className="w-full rounded-t transition-opacity hover:opacity-80"
-                style={{
-                  height: `${Math.max(2, (band.count / max) * 100)}%`,
-                  background: colorFor(band.label),
-                }}
-                title={`${band.label} (${band.hint}): ${band.count} partners, ${pctOfTotal.toFixed(0)}% of the schedule`}
-                role="img"
-                aria-label={`${band.label}: ${band.count} partners`}
-              />
-            </div>
-          );
-        })}
-      </div>
+    /* Six columns each carrying a name and a range need about 30rem before the labels
+       start breaking mid-word. Below that this scrolls rather than shrinking, which is
+       the same answer the wide tables on this page give. */
+    <div className="overflow-x-auto">
+      <div className="min-w-[30rem]">
+        <div className="flex h-40 items-end gap-2">
+          {bands.map((band) => {
+            const pctOfTotal = total > 0 ? (band.count / total) * 100 : 0;
+            return (
+              <div key={band.label} className="flex h-full flex-1 flex-col justify-end gap-1.5">
+                <div className="tabular text-center text-xs font-medium text-ink">{band.count}</div>
+                <div
+                  className="w-full rounded-t transition-opacity hover:opacity-80"
+                  style={{
+                    height: `${Math.max(2, (band.count / max) * 100)}%`,
+                    background: colorFor(band.label),
+                  }}
+                  title={`${band.label} (${band.hint}): ${band.count} partners, ${pctOfTotal.toFixed(0)}% of the schedule`}
+                  role="img"
+                  aria-label={`${band.label}: ${band.count} partners`}
+                />
+              </div>
+            );
+          })}
+        </div>
 
-      <div className="mt-2 flex gap-2 border-t border-hairline pt-2">
-        {bands.map((band) => (
-          <div key={band.label} className="flex-1 text-center">
-            <div className="flex items-center justify-center gap-0.5 text-2xs font-medium text-ink-secondary">
-              {band.dutyFree && <CircleCheck className="h-2.5 w-2.5 text-status-good" aria-hidden />}
-              {band.label}
+        <div className="mt-2 flex gap-2 border-t border-hairline pt-2">
+          {bands.map((band) => (
+            <div key={band.label} className="flex-1 text-center">
+              <div className="flex items-center justify-center gap-0.5 text-2xs font-medium text-ink-secondary">
+                {band.dutyFree && (
+                  <CircleCheck className="h-2.5 w-2.5 text-status-good" aria-hidden />
+                )}
+                {band.label}
+              </div>
+              <div className="text-2xs text-ink-muted">{band.hint}</div>
             </div>
-            <div className="text-2xs text-ink-muted">{band.hint}</div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

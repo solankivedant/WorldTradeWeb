@@ -93,7 +93,7 @@ export function TariffExplorer({
   return (
     <div className="card overflow-hidden">
       <div className="flex flex-wrap items-end gap-3 border-b border-hairline p-3">
-        <label className="flex flex-col gap-1">
+        <label className="flex w-full min-w-0 flex-col gap-1 sm:w-auto">
           <span className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
             Charged by
           </span>
@@ -103,7 +103,7 @@ export function TariffExplorer({
               startRouteProgress();
               setReporter(e.target.value);
             }}
-            className="h-9 w-56 rounded-md border border-hairline bg-plane px-2 text-sm focus:border-series-1 focus:outline-none"
+            className="h-9 w-full rounded-md border border-hairline bg-plane px-2 text-sm focus:border-series-1 focus:outline-none sm:w-56"
           >
             {countries.map((c) => (
               <option key={c.iso3} value={c.iso3}>
@@ -113,11 +113,11 @@ export function TariffExplorer({
           </select>
         </label>
 
-        <label className="flex flex-col gap-1">
+        <label className="flex w-full min-w-0 flex-col gap-1 sm:w-auto">
           <span className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
             Find a partner
           </span>
-          <span className="relative">
+          <span className="relative block">
             <Search
               className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-muted"
               aria-hidden
@@ -126,12 +126,12 @@ export function TariffExplorer({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Filter partners..."
-              className="h-9 w-52 rounded-md border border-hairline bg-plane pl-8 pr-2 text-sm placeholder:text-ink-muted focus:border-series-1 focus:outline-none"
+              className="h-9 w-full rounded-md border border-hairline bg-plane pl-8 pr-2 text-sm placeholder:text-ink-muted focus:border-series-1 focus:outline-none sm:w-52"
             />
           </span>
         </label>
 
-        <label className="flex flex-col gap-1">
+        <label className="flex w-full min-w-0 flex-col gap-1 sm:w-auto">
           <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
             <ArrowUpDown className="h-3 w-3" aria-hidden />
             Sort
@@ -139,7 +139,7 @@ export function TariffExplorer({
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as Sort)}
-            className="h-9 rounded-md border border-hairline bg-plane px-2 text-sm focus:border-series-1 focus:outline-none"
+            className="h-9 w-full rounded-md border border-hairline bg-plane px-2 text-sm focus:border-series-1 focus:outline-none sm:w-auto"
           >
             <option value="rate-desc">Highest rate first</option>
             <option value="rate-asc">Lowest rate first</option>
@@ -168,7 +168,7 @@ export function TariffExplorer({
         </p>
       ) : (
         <div className="max-h-[620px] overflow-auto">
-          <table className="w-full text-xs">
+          <table className="w-full min-w-[38rem] text-xs">
             <caption className="sr-only">
               Effectively applied tariff rates {reporterName} charges each partner
             </caption>

@@ -48,7 +48,10 @@ export function Segmented<T extends string>({
     <div
       role="group"
       aria-label={label}
-      className={`inline-flex items-center rounded-lg border border-hairline bg-plane p-0.5 ${className}`}
+      // Scrolls rather than stretches its container: three labelled options with counts
+      // are wider than a phone, and a control that widens the page pushes every card on
+      // it sideways.
+      className={`inline-flex max-w-full items-center overflow-x-auto rounded-lg border border-hairline bg-plane p-0.5 ${className}`}
     >
       {options.map(({ id, label: text, Icon, hint, count }) => {
         const on = id === value;
@@ -59,7 +62,7 @@ export function Segmented<T extends string>({
             onClick={() => onChange(id)}
             aria-pressed={on}
             title={hint}
-            className={`flex items-center gap-1.5 rounded-md transition-colors ${pad} ${
+            className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md transition-colors ${pad} ${
               on
                 ? "bg-series-1/15 font-medium text-series-1"
                 : "text-ink-secondary hover:bg-raised hover:text-ink"

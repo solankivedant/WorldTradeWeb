@@ -157,8 +157,11 @@ export function CountryPicker({
         )}
       </button>
 
+      {/* The panel matches the trigger's width on a phone, where the controls run the
+          full width of the card anyway. A fixed 17rem panel hanging off a narrower
+          trigger fell off the right edge of the viewport. */}
       {open && (
-        <div className="floating absolute left-0 z-50 mt-1 w-[17rem] overflow-hidden">
+        <div className="floating absolute left-0 z-50 mt-1 w-full min-w-[13rem] overflow-hidden sm:w-[17rem]">
           <div className="relative border-b border-hairline">
             <Search
               className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-muted"

@@ -70,7 +70,7 @@ export function ExploreControls({
           <select
             value={sector}
             onChange={(e) => set(setSector)(e.target.value)}
-            className="h-9 w-52 rounded-md border border-hairline bg-plane px-2 text-sm focus:border-series-1 focus:outline-none"
+            className="h-9 w-full rounded-md border border-hairline bg-plane px-2 text-sm focus:border-series-1 focus:outline-none sm:w-52"
           >
             <option value="">All sectors</option>
             {SECTOR_CATALOG.map((s) => (
@@ -88,7 +88,7 @@ export function ExploreControls({
             onChange={set(setCountry)}
             label="Involving country"
             placeholder="Any country"
-            className="w-52"
+            className="w-full sm:w-52"
           />
         </Field>
 
@@ -96,7 +96,7 @@ export function ExploreControls({
           <select
             value={region}
             onChange={(e) => set(setRegion)(e.target.value)}
-            className="h-9 w-52 rounded-md border border-hairline bg-plane px-2 text-sm focus:border-series-1 focus:outline-none"
+            className="h-9 w-full rounded-md border border-hairline bg-plane px-2 text-sm focus:border-series-1 focus:outline-none sm:w-52"
           >
             <option value="">Any region</option>
             {regions.map((r) => (
@@ -111,7 +111,7 @@ export function ExploreControls({
           <select
             value={min}
             onChange={(e) => set(setMin)(e.target.value)}
-            className="h-9 rounded-md border border-hairline bg-plane px-2 text-sm focus:border-series-1 focus:outline-none"
+            className="h-9 w-full rounded-md border border-hairline bg-plane px-2 text-sm focus:border-series-1 focus:outline-none sm:w-auto"
           >
             {MIN_VALUE_STEPS.map((s) => (
               <option key={s.label} value={s.value}>
@@ -277,13 +277,13 @@ function Pair({
 }) {
   return (
     <Field label={label} icon={<ArrowLeftRight className="h-3 w-3" aria-hidden />} plain>
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
         <CountryPicker
           countries={countries}
           value={from}
           onChange={onFrom}
           label={`${label}: first country`}
-          className="w-44"
+          className="w-full sm:w-44"
         />
         <span className="text-xs text-ink-muted">and</span>
         <CountryPicker
@@ -291,7 +291,7 @@ function Pair({
           value={to}
           onChange={onTo}
           label={`${label}: second country`}
-          className="w-44"
+          className="w-full sm:w-44"
         />
       </div>
     </Field>
@@ -312,7 +312,7 @@ function Field({
 }) {
   const Tag = plain ? "div" : "label";
   return (
-    <Tag className="flex flex-col gap-1">
+    <Tag className="flex w-full min-w-0 flex-col gap-1 sm:w-auto">
       <span className="flex items-center gap-1 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
         {icon}
         {label}

@@ -211,7 +211,7 @@ export function OpportunityBoard({
             {descending ? "High to low" : "Low to high"}
           </button>
 
-          <span className="relative">
+          <span className="relative block min-w-0 flex-1 sm:flex-none">
             <Search
               className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-muted"
               aria-hidden
@@ -221,7 +221,7 @@ export function OpportunityBoard({
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find a market or sector..."
               aria-label="Filter results by market or sector name"
-              className="h-8 w-56 rounded-md border border-hairline bg-plane pl-8 pr-2 text-xs placeholder:text-ink-muted focus:border-series-1 focus:outline-none"
+              className="h-8 w-full rounded-md border border-hairline bg-plane pl-8 pr-2 text-xs placeholder:text-ink-muted focus:border-series-1 focus:outline-none sm:w-56"
             />
           </span>
 

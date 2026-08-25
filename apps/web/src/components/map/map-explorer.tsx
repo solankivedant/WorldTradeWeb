@@ -54,7 +54,7 @@ export function MapExplorer({
     defaultValue: String(defaultYear),
     clearOnDefault: true,
   });
-  const [metric] = useQueryState("metric", { defaultValue: "volume", clearOnDefault: true });
+  const [metric, setMetric] = useQueryState("metric", { defaultValue: "volume", clearOnDefault: true });
   const [sector, setSector] = useQueryState("sector", { defaultValue: "", clearOnDefault: true });
   const [focus, setFocus] = useQueryState("focus", { defaultValue: "", clearOnDefault: true });
   // The open corridor is the SELECTED country plus this partner. Storing only the partner
@@ -163,7 +163,9 @@ export function MapExplorer({
 
         {/* ---- hint, which changes once there is something else to click ---- */}
         {payload && !connection && (
-          <div className="floating pointer-events-none absolute left-1/2 top-3 z-20 flex -translate-x-1/2 items-center gap-1.5 px-3 py-1.5 text-2xs text-ink-secondary">
+          // Hidden below sm: centred on a phone it lands on top of the sector filter,
+          // and "click" is the wrong verb on the devices it would be covering.
+          <div className="floating pointer-events-none absolute left-1/2 top-3 z-20 hidden -translate-x-1/2 items-center gap-1.5 px-3 py-1.5 text-2xs text-ink-secondary sm:flex">
             <MousePointerClick className="h-3.5 w-3.5 text-series-1" aria-hidden />
             {focusIso
               ? "Click any flow line to open that connection"
@@ -201,6 +203,7 @@ export function MapExplorer({
         years={years}
         onYear={onYear}
         metric={metric as MapMetric}
+        onMetric={(next) => setMetric(next === "volume" ? null : next)}
         hasFlows={Boolean(payload?.detail?.flows.length)}
         meta={meta}
         reportingCountries={payload?.reportingCountries ?? 0}

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CalendarRange, Info, Pause, Play } from "lucide-react";
+import { ArrowLeftRight, CalendarRange, Info, Pause, Play, Scale } from "lucide-react";
 import { divergingSteps, flowColors, sequentialSteps } from "@/lib/palette";
+import { Segmented } from "@/components/segmented";
 import { useTheme } from "@/components/theme";
 import type { Provenance } from "@/lib/types";
 import type { MapMetric } from "./types";
@@ -19,6 +20,7 @@ export function MapFooter({
   years,
   onYear,
   metric,
+  onMetric,
   hasFlows,
   meta,
   reportingCountries,
@@ -27,6 +29,8 @@ export function MapFooter({
   years: number[];
   onYear: (year: number) => void;
   metric: MapMetric;
+  /** Below md the header has no room for the metric switch, so it lives here instead. */
+  onMetric: (metric: MapMetric) => void;
   hasFlows: boolean;
   meta: Provenance;
   reportingCountries: number;
@@ -57,8 +61,32 @@ export function MapFooter({
   }, [year, last, playing]);
 
   return (
-    <div className="pointer-events-auto border-t border-hairline bg-plane/95 backdrop-blur">
-      <div className="flex flex-col gap-3 px-4 py-2.5 lg:flex-row lg:items-center lg:gap-6">
+    // Tagged so the floating country panel can measure it: the bar's height changes with
+    // the viewport (the legends wrap, and the metric switch only exists below md), and a
+    // panel clamped against a hardcoded height sat over the year scrubber on a phone.
+    <div
+      data-map-footer
+      className="pointer-events-auto border-t border-hairline bg-plane/95 backdrop-blur"
+    >
+      <div className="flex flex-col gap-3 px-3 py-2.5 sm:px-4 lg:flex-row lg:items-center lg:gap-6">
+        {/*
+          ---- metric switch, narrow viewports only ----
+          The header carries this from md up. Below that the header has room for the nav
+          and the theme toggle and nothing else, and a map whose only lens control is off
+          screen is a map stuck on one meaning.
+        */}
+        <Segmented
+          label="Map metric"
+          value={metric}
+          onChange={onMetric}
+          size="sm"
+          className="w-full justify-center md:hidden"
+          options={[
+            { id: "volume" as MapMetric, label: "Total trade", Icon: ArrowLeftRight },
+            { id: "balance" as MapMetric, label: "Balance", Icon: Scale },
+          ]}
+        />
+
         {/* ---- year scrubber ---- */}
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <button

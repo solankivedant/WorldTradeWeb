@@ -125,8 +125,8 @@ export function CorridorTable({
             direction, seller first
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="relative">
+        <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
+          <span className="relative block min-w-0 flex-1 sm:flex-none">
             <Search
               className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-ink-muted"
               aria-hidden
@@ -135,7 +135,7 @@ export function CorridorTable({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Find a country in this list..."
-              className="h-8 w-56 rounded-md border border-hairline bg-plane pl-8 pr-2 text-xs placeholder:text-ink-muted focus:border-series-1 focus:outline-none"
+              className="h-8 w-full rounded-md border border-hairline bg-plane pl-8 pr-2 text-xs placeholder:text-ink-muted focus:border-series-1 focus:outline-none sm:w-56"
             />
           </span>
           <p className="shrink-0 text-2xs text-ink-muted">

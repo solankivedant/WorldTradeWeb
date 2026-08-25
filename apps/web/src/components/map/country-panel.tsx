@@ -54,6 +54,7 @@ export function CountryPanel({
   const { resolved } = useTheme();
   const colors = flowColors(resolved);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [box, setBox] = useState({ width: PANEL_W, footer: FOOTER_H });
   const drag = useRef<{ dx: number; dy: number } | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -65,20 +66,44 @@ export function CountryPanel({
   }, [pos]);
 
   /**
+   * The panel's width and the space to leave under it are MEASURED, not assumed.
+   *
+   * 340px is wider than the gap between the margins on a small phone, and the footer is
+   * not one height: its legends wrap as the viewport narrows and it grows a metric switch
+   * below md. Against the old fixed 72px the panel sat over the year scrubber - the one
+   * control the clamp below exists to protect.
+   */
+  useEffect(() => {
+    const measure = () => {
+      const footer = document.querySelector<HTMLElement>("[data-map-footer]");
+      setBox({
+        width: Math.min(PANEL_W, window.innerWidth - MARGIN * 2),
+        footer: footer?.offsetHeight ?? FOOTER_H,
+      });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  /**
    * Keep the panel inside the map area.
    *
    * The lower bound is computed from the panel's real height so it can never be dragged
    * down over the year scrubber - that bar is the map's primary control and losing it
    * behind a panel would be worse than the panel being slightly constrained.
    */
-  const clamp = useCallback((x: number, y: number) => {
-    const h = panelRef.current?.offsetHeight ?? 400;
-    const maxY = Math.max(HEADER_H + MARGIN, window.innerHeight - FOOTER_H - h - MARGIN);
-    return {
-      x: Math.max(MARGIN, Math.min(x, window.innerWidth - PANEL_W - MARGIN)),
-      y: Math.max(HEADER_H + MARGIN, Math.min(y, maxY)),
-    };
-  }, []);
+  const clamp = useCallback(
+    (x: number, y: number) => {
+      const h = panelRef.current?.offsetHeight ?? 400;
+      const maxY = Math.max(HEADER_H + MARGIN, window.innerHeight - box.footer - h - MARGIN);
+      return {
+        x: Math.max(MARGIN, Math.min(x, window.innerWidth - box.width - MARGIN)),
+        y: Math.max(HEADER_H + MARGIN, Math.min(y, maxY)),
+      };
+    },
+    [box],
+  );
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -124,8 +149,13 @@ export function CountryPanel({
   return (
     <div
       ref={panelRef}
-      className="floating pointer-events-auto fixed z-30 flex max-h-[calc(100vh-11rem)] flex-col overflow-hidden"
-      style={{ left: pos.x, top: pos.y, width: PANEL_W }}
+      className="floating pointer-events-auto fixed z-30 flex flex-col overflow-hidden"
+      style={{
+        left: pos.x,
+        top: pos.y,
+        width: box.width,
+        maxHeight: `calc(100vh - ${HEADER_H + box.footer + MARGIN * 3}px)`,
+      }}
       role="dialog"
       aria-label={`${detail.name} trade summary`}
     >
