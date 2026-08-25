@@ -36,6 +36,10 @@ type Hit =
 const NAV = [
   { href: "/", label: "Map", Icon: MapIcon },
   { href: "/explore", label: "Explore", Icon: Compass },
+  // Deliberately next to Opportunities: the two are mirror questions about the same gap -
+  // what a market lacks, and who could fill it - and sitting them together is the cheapest
+  // way to say so.
+  { href: "/needs", label: "Demand", Icon: Scale },
   { href: "/opportunities", label: "Opportunities", Icon: Lightbulb },
   { href: "/tariffs", label: "Tariffs", Icon: Percent },
   { href: "/source", label: "Source", Icon: Database },

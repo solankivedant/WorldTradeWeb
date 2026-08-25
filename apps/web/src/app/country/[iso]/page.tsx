@@ -36,6 +36,7 @@ import {
   TO_SOURCE,
   toCorridor,
   toExplore,
+  toNeeds,
   toOpportunities,
   toSector,
   toTariffs,
@@ -182,6 +183,7 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
       ? toCorridor(country.iso3, topPartner.iso3, country.name, topPartner.name)
       : null,
     topSector ? toSector(topSector.code, topSector.name) : null,
+    toNeeds(country.iso3, country.name),
     toTariffs(country.iso3, country.name),
     toOpportunities(country.iso3, country.name),
     toExplore(`?country=${country.iso3}&view=connections`, country.name),

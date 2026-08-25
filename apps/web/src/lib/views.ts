@@ -7,6 +7,7 @@ import {
   Map as MapIcon,
   Percent,
   Route,
+  Scale,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -44,6 +45,7 @@ export type ViewId =
   | "corridor"
   | "sector"
   | "tariffs"
+  | "needs"
   | "opportunities"
   | "source";
 
@@ -89,6 +91,13 @@ export const VIEWS: Record<ViewId, ViewDef> = {
     Icon: Percent,
     grain: "one country's schedule against every partner",
     question: "what does it cost to bring goods across this border?",
+  },
+  needs: {
+    id: "needs",
+    label: "Supply & demand",
+    Icon: Scale,
+    grain: "one economy, all sixteen sector groups",
+    question: "what does this country buy far more of than it sells, and who fills the gap?",
   },
   opportunities: {
     id: "opportunities",
@@ -169,6 +178,18 @@ export function toOpportunities(origin: string, name: string, sector?: string): 
     label: `Where ${name} could sell more`,
     question: "Large markets it barely supplies, scored with the arithmetic shown.",
     view: "opportunities",
+  };
+}
+
+export function toNeeds(iso3: string, name: string, sector?: string): RelatedLink {
+  const query = sector
+    ? `?country=${iso3}&sector=${encodeURIComponent(sector)}`
+    : `?country=${iso3}`;
+  return {
+    href: `/needs${query}`,
+    label: `What ${name} leans on the world for`,
+    question: "Every sector group it buys more of than it sells, and who currently supplies it.",
+    view: "needs",
   };
 }
 

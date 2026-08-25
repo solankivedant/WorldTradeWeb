@@ -145,8 +145,19 @@ export function MapIntroDialog({
   const last = years[years.length - 1];
 
   return (
+    /*
+      The overlay CENTRES the panel; it never scrolls itself.
+      
+      Centring an over-tall child inside a scroll container is the bug this replaces: with
+      `align-items: center` the overflow spills equally in both directions, and the half
+      that goes above the container's origin is not in its scroll range at all - so the
+      title was unreachable no matter how far you scrolled, and the buttons were hidden
+      behind the map footer. Capping the panel at `max-h-full` and scrolling its BODY
+      keeps the top and the actions on screen at every height, which is what a reader
+      needs from a panel whose whole job is to orient them.
+    */
     <div
-      className="absolute inset-0 z-40 flex items-start justify-center overflow-y-auto bg-plane/70 p-3 backdrop-blur-sm sm:items-center sm:p-6"
+      className="absolute inset-0 z-40 flex items-center justify-center bg-plane/70 p-3 backdrop-blur-sm sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-labelledby="intro-title"
@@ -154,17 +165,22 @@ export function MapIntroDialog({
       <div
         ref={shell}
         tabIndex={-1}
-        className="floating w-full max-w-3xl p-5 outline-none sm:p-6"
+        className="floating flex max-h-full w-full max-w-3xl flex-col overflow-hidden outline-none"
       >
-        <div className="flex items-start justify-between gap-4">
+        {/* ---- pinned head ---- */}
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-hairline px-5 pb-4 pt-5 sm:px-6">
           <div className="min-w-0">
-            <h2 id="intro-title" className="text-xl font-semibold tracking-tight sm:text-2xl">
+            <h2
+              id="intro-title"
+              className="text-xl font-semibold tracking-tight sm:text-2xl"
+            >
               World trade, mapped
             </h2>
             <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-ink-secondary">
-              What every country sells and buys, the routes between them, what those routes
-              cost in tariffs, and where the unmet demand sits. One published build behind
-              all of it, so any two screens can be compared.
+              What every country sells and buys, the routes between them, what
+              those routes cost in tariffs, and where the unmet demand sits. One
+              published build behind all of it, so any two screens can be
+              compared.
             </p>
           </div>
           <button
@@ -177,60 +193,73 @@ export function MapIntroDialog({
           </button>
         </div>
 
-        {/* Coverage, from the live build. A reader's first question about a dataset like
+        {/*
+          ---- scrolling body ----
+          `min-h-0` is load-bearing: a flex child's automatic minimum size is its content
+          height, so without it this region refuses to shrink below its content and pushes
+          the actions off the bottom instead of scrolling.
+        */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-4 sm:px-6">
+          {/* Coverage, from the live build. A reader's first question about a dataset like
             this is how much of the world is actually in it. */}
-        <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Fact
-            label="Reporting now"
-            value={reportingCountries ? String(reportingCountries) : "-"}
-            hint="countries, this year"
-          />
-          <Fact label="Sectors" value={String(SECTOR_CATALOG.length)} hint="HS section groups" />
-          <Fact
-            label="Years"
-            value={first && last ? `${first}-${last}` : "-"}
-            hint="the range the source covers"
-          />
-          {/* Vintage is the VALUE and the source list the hint, not the other way round.
+          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Fact
+              label="Reporting now"
+              value={reportingCountries ? String(reportingCountries) : "-"}
+              hint="countries, this year"
+            />
+            <Fact
+              label="Sectors"
+              value={String(SECTOR_CATALOG.length)}
+              hint="HS section groups"
+            />
+            <Fact
+              label="Years"
+              value={first && last ? `${first}-${last}` : "-"}
+              hint="the range the source covers"
+            />
+            {/* Vintage is the VALUE and the source list the hint, not the other way round.
               `meta.source` is every dataset in the build joined together, so as a headline
               it ran to four lines and stretched the whole row; the vintage is the shorter
               string and the one that actually identifies which figures these are. */}
-          <Fact label="Build" value={meta.vintage} hint={meta.source} />
-        </dl>
+            <Fact label="Build" value={meta.vintage} hint={meta.source} />
+          </dl>
 
-        {/* ---- the three interactions this canvas supports ---- */}
-        <h3 className="mt-5 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
-          Reading the map
-        </h3>
-        <ol className="mt-2 grid gap-2 sm:grid-cols-3">
-          <Step
-            n={1}
-            Icon={MousePointerClick}
-            title="Click a country"
-            body="Its biggest flows draw on the globe - green leaving, red arriving, each with an arrowhead and a value."
-          />
-          <Step
-            n={2}
-            Icon={Route}
-            title="Click a flow line"
-            body="That connection opens on its own, showing both directions rather than only the one you clicked."
-          />
-          <Step
-            n={3}
-            Icon={PanelsTopLeft}
-            title="Open the full view"
-            body="Either panel links through to the dashboard behind it, where the same figures get thirteen years of context."
-          />
-        </ol>
+          {/* ---- the three interactions this canvas supports ---- */}
+          <h3 className="mt-5 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
+            Reading the map
+          </h3>
+          <ol className="mt-2 grid gap-2 sm:grid-cols-3">
+            <Step
+              n={1}
+              Icon={MousePointerClick}
+              title="Click a country"
+              body="Its biggest flows draw on the globe - green leaving, red arriving, each with an arrowhead and a value."
+            />
+            <Step
+              n={2}
+              Icon={Route}
+              title="Click a flow line"
+              body="That connection opens on its own, showing both directions rather than only the one you clicked."
+            />
+            <Step
+              n={3}
+              Icon={PanelsTopLeft}
+              title="Open the full view"
+              body="Either panel links through to the dashboard behind it, where the same figures get thirteen years of context."
+            />
+          </ol>
 
-        <h3 className="mt-5 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
-          How the rest of the site fits together
-        </h3>
-        <div className="mt-2">
-          <ViewMap compact />
+          <h3 className="mt-5 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
+            How the rest of the site fits together
+          </h3>
+          <div className="mt-2">
+            <ViewMap compact />
+          </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
+        {/* ---- pinned actions ---- */}
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-hairline px-5 py-3.5 sm:px-6">
           <button
             type="button"
             onClick={onDismiss}
@@ -246,7 +275,7 @@ export function MapIntroDialog({
           >
             Skip the map, list everything
           </Link>
-          <span className="text-2xs text-ink-muted">
+          <span className="hidden text-2xs text-ink-muted sm:block">
             Reopen it any time from &quot;Guide&quot;, bottom left.
           </span>
         </div>
@@ -255,10 +284,20 @@ export function MapIntroDialog({
   );
 }
 
-function Fact({ label, value, hint }: { label: string; value: string; hint: string }) {
+function Fact({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+}) {
   return (
     <div className="rounded-lg border border-hairline bg-plane px-3 py-2">
-      <dt className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">{label}</dt>
+      <dt className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
+        {label}
+      </dt>
       {/* Wraps rather than truncating: the source name is the one value here a reader may
           not already know, so clipping it to "World Bank WITS ..." hides the half that
           identifies it. */}

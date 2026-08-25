@@ -32,8 +32,8 @@ const TIERS: { heading: string; caption: string; views: ViewId[] }[] = [
   },
   {
     heading: "3 · Ask a question of it",
-    caption: "What it costs to cross the border, and where the unmet demand sits.",
-    views: ["tariffs", "opportunities"],
+    caption: "What it buys more of than it makes, what crossing the border costs, and who could fill the gap.",
+    views: ["needs", "tariffs", "opportunities"],
   },
 ];
 
@@ -46,6 +46,7 @@ const HREF: Record<ViewId, string> = {
   country: "/country/CHN",
   corridor: "/corridor/CHN/USA",
   sector: "/product/84-85_MachElec",
+  needs: "/needs",
   tariffs: "/tariffs",
   opportunities: "/opportunities",
   source: "/source",
