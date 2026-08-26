@@ -249,3 +249,42 @@ export interface IndicatorReading {
   reporting: number;
   history: { year: number; value: number }[];
 }
+
+/**
+ * Country totals for years past the WITS frontier, from UN Comtrade.
+ *
+ * Its OWN file and its own access functions, never merged into `totals.json`. A series
+ * whose 2010-2023 came from WITS and whose 2024 came from Comtrade, with nothing on the
+ * row saying so, is a series where nobody can tell a real discontinuity from a source
+ * change. Same rule the mirror estimates follow.
+ */
+export interface FrontierFile {
+  source: string;
+  vintage: string;
+  built_at: string;
+  units: string;
+  note: string;
+  /** Per year: how many countries filed, and whether that is enough to call it complete. */
+  years: Record<string, { reporters: number; complete: boolean }>;
+  totals: Record<string, Record<string, { x?: number; m?: number; xr?: boolean; mr?: boolean }>>;
+}
+
+/**
+ * HS chapter 88 - aircraft and spacecraft.
+ *
+ * A SUBSET of the `86-89_Transport` section group, never a seventeenth sector. `xr`/`mr`
+ * are false where the source derived the chapter total by summing the country's HS-6
+ * lines rather than the country filing that aggregate itself.
+ */
+export interface AviationFile {
+  source: string;
+  vintage: string;
+  built_at: string;
+  units: string;
+  note: string;
+  hs_chapter: string;
+  within_group: string;
+  classification: string;
+  years: number[];
+  totals: Record<string, Record<string, { x?: number; m?: number; xr?: boolean; mr?: boolean }>>;
+}

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { EstimateTag, Warn } from "@/components/ui";
 import { PageHeader } from "@/components/page-header";
+import { aviationMeta, frontierMeta, frontierYears } from "@/lib/data";
 import { ViewMap } from "@/components/view-map";
 
 export const metadata = { title: "Source - WorldTradeWeb" };
@@ -134,6 +135,26 @@ export default function DataPage() {
   const builtAt = meta.built_at
     ? `${new Date(meta.built_at).toISOString().slice(0, 16).replace("T", " ")} UTC`
     : null;
+
+  /*
+   * The second source, read through its own accessors. Null when only the WITS pipeline
+   * has been run, in which case this whole block is simply absent rather than claiming a
+   * source the build does not have.
+   */
+  const fr = frontierMeta();
+  const av = aviationMeta();
+  const second =
+    fr || av
+      ? {
+          name: fr?.source || av?.source || "",
+          vintage: fr?.vintage || av?.vintage || "",
+          chapter: av?.chapter ?? "",
+          within: av?.withinGroup ?? "",
+        }
+      : null;
+  const laterYears = frontierYears()
+    .map((y) => y.year)
+    .join(" and ");
 
   return (
     <div className="mx-auto max-w-[1200px] px-4 py-5 lg:px-6">
@@ -250,6 +271,48 @@ export default function DataPage() {
           source to smooth a disagreement - where two published numbers conflict, both are
           shown and the gap is flagged.
         </p>
+
+        {/*
+          The second source, registered where a sceptical reader will look for it. It is
+          named separately from the WITS band above rather than folded into it, because
+          the whole reason these figures are kept in their own files is that a reader has
+          to be able to tell which extraction a number came from.
+        */}
+        {second && (
+          <div className="mt-3 rounded-lg border border-hairline bg-plane p-3.5">
+            <h3 className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
+              Second source: {second.name}
+            </h3>
+            <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">
+              Added for the two things the primary source does not carry.{" "}
+              <strong className="text-ink-secondary">Later years:</strong> WITS returns
+              HTTP 404 for {laterYears || "2024 onward"} for every reporter, so country
+              totals for those years come from here.{" "}
+              <strong className="text-ink-secondary">Chapter detail:</strong> the WITS
+              trade endpoint accepts only its sixteen section-group codes, so HS chapter 88
+              (aircraft) had to be fetched separately.
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+              Both land in their own published files and their own access functions, and
+              neither is merged into the WITS series. A figure from this source is never
+              drawn as a continuation of one from the other, because a change of source and
+              a change in trade look identical once they share a line.
+            </p>
+            <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+              <strong className="text-ink-secondary">Licence.</strong> UN Comtrade permits
+              re-dissemination of transformed data - their term for aggregations and derived
+              indicators - with no fee, and states that a data-visualisation system may
+              present actual figures. The restriction applies to redistributing original
+              records in bulk, by API streaming or file download. This site publishes
+              derived aggregates and offers neither, which is why the source is usable here
+              and why no bulk export of it exists on the site.
+            </p>
+            <p className="tabular mt-2 text-2xs text-ink-muted">
+              vintage {second.vintage}
+              {second.chapter ? ` · HS chapter ${second.chapter} within ${second.within}` : ""}
+            </p>
+          </div>
+        )}
       </Section>
 
       {/* ---- pipeline as a path ---- */}

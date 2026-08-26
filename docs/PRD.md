@@ -125,8 +125,8 @@ An interactive world map where every country, corridor, and product is clickable
 
 | Source | Provides | Cadence | Notes |
 |---|---|---|---|
-| UN Comtrade | Bilateral goods trade by HS code | Monthly / annual, lagged | Core dataset; API is rate-limited |
-| World Bank WITS | Tariffs, trade indicators | Annual | Wraps TRAINS + Comtrade |
+| UN Comtrade | Country totals past the WITS frontier (2024, 2025) and HS chapter 88 (aircraft) | Annual, lagged | **In use.** Public preview endpoint, no key: 500 records per call and a hard rate limit, so reporters are batched 80 per request and dimensions are pinned. Own published files (`frontier.json`, `aviation.json`), never merged into the WITS series. Licence permits re-disseminating transformed/derived data; no bulk export of original records is offered |
+| World Bank WITS | Bilateral goods trade, sector cube, tariffs | Annual, to 2023 | **In use.** The core dataset. Wraps TRAINS + Comtrade. Stops at 2023 - 2024 onward returns HTTP 404 for every reporter - and serves only its sixteen section-group codes, so `product/88` is an HTTP 400 |
 | WTO Tariff Download Facility | MFN and bound tariff schedules | Annual | Authoritative for MFN rates |
 | IMF DOTS | Direction of trade, aggregates | Quarterly | Good for balance sanity checks |
 | World Bank WDI | GDP, population, context | Annual | Normalization denominators |
@@ -138,7 +138,8 @@ An interactive world map where every country, corridor, and product is clickable
 | Natural Earth / geoBoundaries | Country geometry | Static | Simplified topology for map performance |
 | WTO I-TIP / UNCTAD TRAINS | Non-tariff measure inventory | Irregular | **Blocked.** WITS NTM endpoint 403s, the WTO timeseries API needs a subscription key, TRAINS Online has no public JSON. Customs efficiency stands in as a labelled proxy |
 | Drewry / Xeneta and similar | Corridor freight rates and lead times | Weekly | **Not licensed.** Corridor-level rates are commercial; only country-level public indices are carried |
-| OEC | Complexity indices | Annual | Methodology reference |
+| OEC | Complexity indices | Annual | **Off limits.** Terms restrict API/bulk output to internal use, and a public site is dissemination. Methodology reference only |
+| UNIDO INDSTAT | Manufacturing output by ISIC, for apparent consumption | Annual, lagged | **Blocked.** Free to a browser since 2022, but `stat.unido.org` returns HTTP 403 to automated requests. Even with the data, output is classified by ISIC activity against trade by HS product, and it covers manufacturing only - so fuels, minerals and agriculture would still have no production figure. Needed before "demand" can mean consumption rather than net import reliance |
 
 ## 9. Risks
 

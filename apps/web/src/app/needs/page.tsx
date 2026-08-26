@@ -9,7 +9,12 @@ import {
 } from "lucide-react";
 import {
   allCountries,
+  aviationFor,
+  aviationMeta,
   avgTariff,
+  frontierFor,
+  frontierMeta,
+  frontierYears,
   getCountry,
   latestYear,
   mirrorFor,
@@ -31,6 +36,7 @@ import { RelatedViews } from "@/components/related-views";
 import { NeedsControls } from "@/components/needs-controls";
 import { NeedsExplorer } from "@/components/needs-explorer";
 import { TradeSeries } from "@/components/charts/trade-series";
+import { FrontierNote } from "@/components/frontier-note";
 import { CountryFlag } from "@/components/country-flag";
 import { growth, pct, usd } from "@/lib/format";
 import {
@@ -216,6 +222,36 @@ export default async function NeedsPage({
   const tariff = avgTariff(iso);
   const series = seriesFor(iso);
 
+  /*
+   * The two second-source overlays. Both are null-safe: the Comtrade build is a separate
+   * pipeline, and a repo that has only run the WITS one still renders this whole page.
+   */
+  const avMeta = aviationMeta();
+  const avRows = avMeta ? aviationFor(iso) : [];
+  const aviation =
+    avMeta && avRows.length
+      ? {
+          group: avMeta.withinGroup,
+          rows: avRows,
+          source: avMeta.source,
+          vintage: avMeta.vintage,
+        }
+      : null;
+
+  const frMeta = frontierMeta();
+  const frontier = frMeta
+    ? frontierYears().map((y) => {
+        const slot = frontierFor(iso, y.year);
+        return {
+          year: y.year,
+          exports: slot.x,
+          imports: slot.m,
+          reporters: y.reporters,
+          complete: y.complete,
+        };
+      })
+    : [];
+
   const relatedLinks: RelatedLink[] = [
     toCountry(iso, country.name),
     largestGap ? toSector(largestGap.code, largestGap.name) : null,
@@ -287,6 +323,21 @@ export default async function NeedsPage({
         </Warn>
       </div>
 
+      {/* Later years, kept visibly apart from the build the rest of the page uses. */}
+      {frMeta && frontier.some((r) => r.exports !== null || r.imports !== null) && (
+        <div className="mt-3">
+          <FrontierNote
+            readings={frontier}
+            baseYear={year}
+            baseExports={totals.x ?? null}
+            baseImports={totals.m ?? null}
+            countryName={country.name}
+            source={frMeta.source}
+            vintage={frMeta.vintage}
+          />
+        </div>
+      )}
+
       <div className="mt-3">
         <NeedsExplorer
           ranked={ranked}
@@ -296,6 +347,7 @@ export default async function NeedsPage({
           countryIso={iso}
           reporterIso={iso}
           lens={lens}
+          aviation={aviation}
         />
       </div>
 
@@ -357,18 +409,23 @@ export default async function NeedsPage({
               thing.
             </p>
             <p>
-              <strong className="text-ink-secondary">Nothing about individual products.</strong>{" "}
-              The grain here is the HS section group, sixteen of them. The chapter list in
-              the supply panel names what a group contains as nomenclature and carries no
-              figures. Per-product detail needs HS-6 lines from UN Comtrade, which is a V2
-              data decision, and the section-group tier was chosen because it is stable
-              across HS revisions.
+              <strong className="text-ink-secondary">
+                Almost nothing about individual products.
+              </strong>{" "}
+              The grain is the HS section group, sixteen of them. The one exception is
+              aircraft: HS chapter 88 is carried as a labelled subset inside Transport,
+              because it is revision-stable and could be sourced separately. Every other
+              chapter list on this page is nomenclature and carries no figures. Broader
+              per-product detail needs HS-6 lines, which is still a V2 data decision.
             </p>
             <p>
-              <strong className="text-ink-secondary">Nothing about this year.</strong> The
-              sector cube is published for {year} only, so no group on this page carries a
-              year-on-year change. The series above is the country total, which does have
-              history, and is a different aggregation.
+              <strong className="text-ink-secondary">
+                Little about the years after {year}.
+              </strong>{" "}
+              The sector cube is published for {year} only, so no group on this page
+              carries a year-on-year change. Country totals for later years come from a
+              second source and are shown in their own strip above, never spliced onto the
+              series.
             </p>
             <p>
               <strong className="text-ink-secondary">Nothing about why.</strong> Freight,

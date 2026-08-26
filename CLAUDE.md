@@ -63,6 +63,47 @@ Real coverage: **190 reporting countries + 53 mirror-estimated · 47,241 bilater
 435,626 corridor-sector slices · 16 HS sector groups · 2010-2023 · ~20,600 tariff pairs.** Country totals match published reality (China $3,380B,
 USA $2,019B, Germany $1,726B, India $431B for 2023).
 
+**There is a SECOND trade source now, and it is deliberately not merged.** WITS stops at
+2023 and serves only its sixteen section-group codes, so two things are impossible through
+it: any year after 2023 (HTTP 404 for every reporter) and any HS chapter (`product/88` is
+an HTTP 400). UN Comtrade's public preview endpoint has both, and its USA 2023 totals match
+this build exactly - $2,018.5B exports, $3,168.5B imports - so it is the same lineage, not
+a competing measurement. It supplies `frontier.json` (country totals for 2024 and 2025) and
+`aviation.json` (HS chapter 88), each with its OWN access functions (`frontierFor`,
+`aviationFor`), and neither is ever written into `totals.json` or `products.json`. A series
+whose 2010-2023 came from WITS and whose 2024 came from Comtrade, with nothing saying so,
+is a series where nobody can tell a source change from a real move in trade.
+
+Three traps in that connector, all already paid for:
+- **The preview endpoint caps at 500 records per call**, and a capped response is a
+  truncated aggregate, not an error. Batches are 80 reporters (~90 rows) and the build
+  refuses the vintage if any response came back at the cap.
+- **Dimensions must be pinned** (`partner2Code`, `motCode`, `customsCode=C00`). Without
+  them one query for ten reporters returned 67 rows fanned across transport-mode and
+  customs-procedure, and summing or truncating those is a confidently wrong number.
+- **Rows carry `reporterISO: null`.** The preview strips descriptive fields, so the M49
+  numeric code MUST be resolved through the Reporters reference file stored in the raw
+  drop. A build that read the ISO off the row maps all 255 reporters to nothing.
+- **Comtrade values are plain USD.** WITS ships thousands and `build.py` multiplies by
+  1000 exactly once. Applying that scaling here would inflate everything a thousandfold.
+
+**Aviation is a SUBSET of Transport, never a seventeenth sector.** HS chapter 88 sits
+inside HS section XVII, which is the `86-89_Transport` group already published. Adding it
+to the sixteen double-counts every aircraft - the same failure that overstated India's
+exports 3.4x when three overlapping WITS schemes were summed. The build proves containment
+rather than assuming it: chapter 88 is checked against each country's own Transport figure
+(303 comparisons, 2 breaches, both sub-$100M and recorded as warnings), and the UI renders
+it nested inside the Transport panel with its share OF that group as the headline.
+
+**"Demand" on the supply-and-demand page means NET IMPORT RELIANCE, not consumption.**
+There is no production series in this build, so apparent consumption cannot be computed.
+UNIDO INDSTAT is the source that would fix it and is free to a browser, but stat.unido.org
+returns 403 to automated requests - the same publisher decision as OEC, and not one to
+route around. Even with it, output is ISIC-classified against HS-classified trade and
+covers manufacturing only, leaving fuels, minerals and agriculture with no production
+figure. Until that is resolved the page says, above the numbers, that a large gap means a
+country buys more than it sells and never that it cannot make any.
+
 2023 is the newest year WITS publishes. The frontier moves one year at a time and sits
 2-3 years behind the wall clock, because WITS republishes national customs data that
 reaches UN Comtrade with a lag - verified against live range queries, 2024 onward returns
@@ -292,6 +333,8 @@ pnpm data:reference                          # World Bank country + indicator re
 pnpm data:context                            # World Bank context layer (22 series, skips if on disk)
 pnpm data:fetch  --vintage=2026-08-22        # WITS trade + tariffs (~1500 requests, ~12 min)
 pnpm data:build  --vintage=2026-08-22        # conform, validate, publish to data/processed/
+pnpm data:comtrade --vintage=2026-08-26      # second source: 2024/2025 totals + HS 88 (16 requests)
+pnpm data:comtrade:build --vintage=2026-08-26   # -> frontier.json, aviation.json
 pnpm data:geo:prepare                        # fetch + simplify Natural Earth (slow, rarely rerun)
 pnpm data:geo                                # -> GeoJSON keyed by ISO3
 pnpm data:all    --vintage=2026-08-22        # all four in order

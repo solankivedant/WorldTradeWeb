@@ -18,6 +18,7 @@ import { pct, usd } from "@/lib/format";
  * is computed on the server and travels on the row.
  */
 import type { SectorBalance, SupplyPicture } from "@/lib/needs";
+import { AviationInset, type AviationYear } from "@/components/aviation-inset";
 
 /**
  * The needs explorer: a ranked list of sector groups, and the supply picture behind
@@ -43,6 +44,7 @@ export function NeedsExplorer({
   countryIso: _countryIso,
   lens,
   reporterIso,
+  aviation,
 }: {
   /** Already ordered by the server: the lens and sort live in the URL, above this. */
   ranked: SectorBalance[];
@@ -54,6 +56,11 @@ export function NeedsExplorer({
   countryIso: string;
   lens: "needs" | "supplies";
   reporterIso: string;
+  /**
+   * HS chapter 88, shown nested inside the Transport group's panel. Null when the
+   * Comtrade overlay has not been built - chapter detail is not in the main source.
+   */
+  aviation: { group: string; rows: AviationYear[]; source: string; vintage: string } | null;
 }) {
   const [selected, setSelected] = useQueryState("sector", {
     defaultValue: "",
@@ -161,6 +168,7 @@ export function NeedsExplorer({
             countryName={countryName}
             reporterIso={reporterIso}
             buying={buying}
+            aviation={aviation && aviation.group === active.code ? aviation : null}
           />
         ) : null}
       </div>
@@ -297,6 +305,7 @@ function SupplyDetail({
   countryName,
   reporterIso,
   buying,
+  aviation,
 }: {
   row: SectorBalance;
   picture: SupplyPicture;
@@ -304,6 +313,7 @@ function SupplyDetail({
   countryName: string;
   reporterIso: string;
   buying: boolean;
+  aviation: { rows: AviationYear[]; source: string; vintage: string } | null;
 }) {
   const top = picture.suppliers[0];
   const widest = picture.suppliers.reduce((max, s) => Math.max(max, s.value), 1);
@@ -401,7 +411,19 @@ function SupplyDetail({
         ))}
       </ul>
 
-      {/* The honest limit of "individual products". Chapters, not figures. */}
+      {/* The one real sub-group figure this build carries, nested in its parent. */}
+      {aviation && (
+        <AviationInset
+          rows={aviation.rows}
+          groupExports={row.exports}
+          groupImports={row.imports}
+          countryName={countryName}
+          source={aviation.source}
+          vintage={aviation.vintage}
+        />
+      )}
+
+      {/* The honest limit of "individual products" beyond that one chapter. */}
       {inside && (
         <div className="border-t border-hairline px-4 py-3">
           <h3 className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-ink-muted">

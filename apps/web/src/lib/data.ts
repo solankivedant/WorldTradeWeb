@@ -15,6 +15,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { SECTOR_CATALOG } from "./sectors";
 import type {
+  AviationFile,
+  FrontierFile,
   BilateralRow,
   Country,
   CorridorRow,
@@ -181,6 +183,16 @@ interface Dataset {
   sectors: BilateralSectorsFile;
   mirror: MirrorFile;
   /**
+   * Years past the WITS frontier, and HS chapter 88, both from UN Comtrade.
+   *
+   * Separate fields for a separate SOURCE, on the same principle as `mirror`: a caller
+   * has to ask for a Comtrade figure by name, so one can never be summed into a WITS
+   * series or averaged with it by accident. Empty objects when the Comtrade build has
+   * not been run - the app degrades to the WITS-only view rather than failing.
+   */
+  frontier: FrontierFile;
+  aviation: AviationFile;
+  /**
    * Who ships a given sector INTO a country, keyed `${destination}|${sectorIndex}`.
    *
    * The forward direction is already a two-key lookup in `sectors.flows`, but "who sells
@@ -310,6 +322,14 @@ export function dataset(): Dataset {
     importsByReporter,
     sectors,
     mirror,
+    frontier: read<FrontierFile>("frontier.json", {
+      source: "", vintage: "", built_at: "", units: "USD", note: "", years: {}, totals: {},
+    }),
+    aviation: read<AviationFile>("aviation.json", {
+      source: "", vintage: "", built_at: "", units: "USD", note: "",
+      hs_chapter: "88", within_group: "86-89_Transport", classification: "",
+      years: [], totals: {},
+    }),
     inboundBySector,
     nonReporters,
     ready: countries.length > 0 && bilateral.length > 0,
@@ -1033,4 +1053,90 @@ export function mirrorPartners(
   sold.sort((a, b) => b.value - a.value);
   bought.sort((a, b) => b.value - a.value);
   return { exports: sold.slice(0, limit), imports: bought.slice(0, limit) };
+}
+
+// ------------------------------------------------------- Comtrade overlay
+
+/**
+ * Country totals for one year past the WITS frontier.
+ *
+ * Named `frontier*` rather than folded into `totalsFor` on purpose: these come from a
+ * DIFFERENT SOURCE with a different vintage, and a caller that wants to draw them beside
+ * the WITS series has to know that and say so on the screen. `totalsFor` stays WITS-only
+ * so no existing caller silently changes meaning.
+ */
+export function frontierFor(iso3: string, year: number): { x: number | null; m: number | null } {
+  const slot = dataset().frontier.totals[iso3]?.[String(year)];
+  return { x: slot?.x ?? null, m: slot?.m ?? null };
+}
+
+/** Available frontier years with their completeness, oldest first. */
+export function frontierYears(): { year: number; reporters: number; complete: boolean }[] {
+  const { years } = dataset().frontier;
+  return Object.entries(years)
+    .map(([year, meta]) => ({ year: Number(year), ...meta }))
+    .sort((a, b) => a.year - b.year);
+}
+
+/** Provenance for the overlay, so a screen showing it can name its source and vintage. */
+export function frontierMeta(): { source: string; vintage: string; note: string } | null {
+  const { source, vintage, note } = dataset().frontier;
+  return source ? { source, vintage, note } : null;
+}
+
+/**
+ * HS chapter 88 for one country, every year the overlay carries.
+ *
+ * `reported` is false where the source summed the country's HS-6 lines to reach the
+ * chapter total rather than the country filing it. That is normal and not an estimate of
+ * missing trade, but it is stated wherever the figure appears.
+ */
+export function aviationFor(
+  iso3: string,
+): {
+  year: number;
+  exports: number | null;
+  imports: number | null;
+  exportsReported: boolean;
+  importsReported: boolean;
+}[] {
+  const years = dataset().aviation.totals[iso3];
+  if (!years) return [];
+  return Object.entries(years)
+    .map(([year, slot]) => ({
+      year: Number(year),
+      exports: slot.x ?? null,
+      imports: slot.m ?? null,
+      exportsReported: Boolean(slot.xr),
+      importsReported: Boolean(slot.mr),
+    }))
+    .sort((a, b) => a.year - b.year);
+}
+
+/** The aviation overlay's own metadata, including which group it sits inside. */
+export function aviationMeta(): {
+  source: string;
+  vintage: string;
+  chapter: string;
+  withinGroup: string;
+  note: string;
+} | null {
+  const { source, vintage, hs_chapter, within_group, note } = dataset().aviation;
+  return source
+    ? { source, vintage, chapter: hs_chapter, withinGroup: within_group, note }
+    : null;
+}
+
+/** Countries ranked by chapter-88 exports in one year. */
+export function aviationRanking(
+  year: number,
+  limit = 12,
+): { iso3: string; exports: number; imports: number | null }[] {
+  const rows: { iso3: string; exports: number; imports: number | null }[] = [];
+  for (const [iso3, years] of Object.entries(dataset().aviation.totals)) {
+    const slot = years[String(year)];
+    if (!slot || slot.x === undefined) continue;
+    rows.push({ iso3, exports: slot.x, imports: slot.m ?? null });
+  }
+  return rows.sort((a, b) => b.exports - a.exports).slice(0, limit);
 }

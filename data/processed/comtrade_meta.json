@@ -1,0 +1,33 @@
+{
+  "source": "UN Comtrade",
+  "vintage": "2026-08-26",
+  "built_at": "2026-08-26T04:18:45.148057+00:00",
+  "units": "USD",
+  "stats": {
+    "reference_reporters": 254,
+    "frontier_rows_kept": 468,
+    "frontier_dropped_unknown_iso": 6,
+    "frontier_dropped_iso_EUR": 4,
+    "frontier_dropped_pseudo_country": 2,
+    "frontier_dropped_iso_S19": 2,
+    "frontier_dropped_iso_MSR": 2,
+    "aviation_rows_kept": 584,
+    "aviation_dropped_unknown_iso": 8,
+    "aviation_dropped_iso_EUR": 4,
+    "aviation_dropped_pseudo_country": 4,
+    "aviation_dropped_iso_S19": 4,
+    "aviation_dropped_iso_MSR": 4,
+    "aviation_dropped_unmapped_code": 2,
+    "frontier_countries": 141,
+    "aviation_countries": 162,
+    "aviation_containment_compared": 303,
+    "aviation_containment_breaches": 2,
+    "frontier_continuity_checked": 270,
+    "frontier_continuity_jumps": 0
+  },
+  "warnings": [
+    "aviation: BRN 2023 x chapter-88 46,547,956 exceeds its own Transport group 33,388,188 - not a subset",
+    "aviation: ECU 2023 x chapter-88 81,346,602 exceeds its own Transport group 45,301,471 - not a subset"
+  ],
+  "license": "UN Comtrade - derived/transformed re-dissemination permitted"
+}
