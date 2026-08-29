@@ -8,16 +8,16 @@ import {
   ExternalLink,
   Layers,
   Loader2,
-  Percent,
   Scale,
   X,
 } from "lucide-react";
-import { flowColors, tariffBandFor } from "@/lib/palette";
+import { flowColors } from "@/lib/palette";
 import { useTheme } from "@/components/theme";
 import { CompareBar } from "@/components/charts/compare-bar";
 import { CountryFlag } from "@/components/country-flag";
 import { TopSectors } from "@/components/top-sectors";
 import { SectorIcon } from "@/components/sector-icon";
+import { TariffRateCell } from "@/components/tariff-rate-cell";
 import { pct, usd } from "@/lib/format";
 import type { ConnectionDetail } from "./types";
 
@@ -206,16 +206,8 @@ export function ConnectionPanel({
 
         {/* ---- tariffs both ways ---- */}
         <div className="grid grid-cols-2 gap-px border-b border-hairline bg-hairline">
-          <TariffCell
-            label={`${cb.iso3} charges ${ca.iso3}`}
-            rate={detail.tariffBOnA}
-            mode={resolved}
-          />
-          <TariffCell
-            label={`${ca.iso3} charges ${cb.iso3}`}
-            rate={detail.tariffAOnB}
-            mode={resolved}
-          />
+          <TariffRateCell label={`${cb.iso3} charges ${ca.iso3}`} rate={detail.tariffBOnA} />
+          <TariffRateCell label={`${ca.iso3} charges ${cb.iso3}`} rate={detail.tariffAOnB} />
         </div>
 
         {/* ---- what actually moves: the sector split ---- */}
@@ -433,41 +425,6 @@ function Direction({
           : share === null
             ? "share not reported"
             : `${pct(share, 1)} of all ${shareOf} exports`}
-      </div>
-    </div>
-  );
-}
-
-function TariffCell({
-  label,
-  rate,
-  mode,
-}: {
-  label: string;
-  rate: number | null;
-  mode: "light" | "dark";
-}) {
-  const band = rate === null ? null : tariffBandFor(rate, mode);
-  return (
-    <div className="bg-surface px-3 py-2">
-      <div className="flex items-center gap-1 truncate text-2xs text-ink-muted">
-        <Percent className="h-2.5 w-2.5 shrink-0" aria-hidden />
-        {label}
-      </div>
-      <div className="mt-1 flex items-center gap-1.5">
-        {band ? (
-          <>
-            <span
-              className="tabular rounded px-1.5 py-0.5 text-2xs font-semibold"
-              style={{ background: band.color, color: band.ink }}
-            >
-              {pct(rate, 1)}
-            </span>
-            <span className="truncate text-2xs text-ink-muted">{band.label}</span>
-          </>
-        ) : (
-          <span className="text-2xs text-ink-muted">not published</span>
-        )}
       </div>
     </div>
   );

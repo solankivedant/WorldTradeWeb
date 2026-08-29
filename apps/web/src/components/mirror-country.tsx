@@ -7,7 +7,7 @@ import {
   Scale,
   Users,
 } from "lucide-react";
-import { Card, Crumb, EstimateTag, ProvenanceBar, Stat } from "@/components/ui";
+import { Card, CaveatList, Crumb, EstimateTag, ProvenanceBar, Stat } from "@/components/ui";
 import { CountryFlag } from "@/components/country-flag";
 import { SectorCompare } from "@/components/charts/sector-compare";
 import { PartnerCompare } from "@/components/charts/partner-compare";
@@ -99,14 +99,24 @@ export function MirrorCountry({
             each of their imports from {country.name} is one of its exports, and each of
             their exports to it is one of its imports.
           </p>
-          <p className="mt-1.5">
-            These are estimates, not declarations. Partners value, time and classify the
-            same shipment differently, and trade with partners who also report nothing is
-            invisible here - so treat the totals as a floor rather than a measurement.{" "}
-            <Link href="/source" className="text-series-1 hover:underline">
+          <div className="mt-1.5">
+            <CaveatList
+              dense
+              items={[
+                <>
+                  These are estimates, not declarations: partners value, time and classify
+                  the same shipment differently, so treat the totals as a floor rather than
+                  a measurement.
+                </>,
+                <>
+                  Trade with partners who also report nothing is invisible here.
+                </>,
+              ]}
+            />
+            <Link href="/source" className="mt-1.5 inline-block text-2xs text-series-1 hover:underline">
               How this is derived
             </Link>
-          </p>
+          </div>
         </div>
       </div>
 
@@ -128,6 +138,7 @@ export function MirrorCountry({
           label="Trade balance (estimated)"
           value={usd(balance)}
           hint={balance === null ? "" : balance >= 0 ? "surplus" : "deficit"}
+          toneValue={balance}
         />
         <Stat
           icon={<Users className="h-3 w-3" aria-hidden />}
@@ -165,34 +176,44 @@ export function MirrorCountry({
 
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <Card title="Why there is no reported figure" icon={<Info className="h-3 w-3" aria-hidden />}>
-          <div className="space-y-2 px-4 pb-4 pt-1 text-xs leading-relaxed text-ink-muted">
-            <p>
-              A country appears here when it files nothing with the World Bank&apos;s WITS
-              and nothing with UN Comtrade for this year. The reasons differ - sanctions,
-              conflict, a statistical agency without the capacity, or a deliberate policy
-              change - and this page does not guess which applies to {country.name}.
-            </p>
-            <p>
-              What it is not is zero trade. Absent data and reported zero are different
-              facts and are kept apart everywhere in this product.
-            </p>
+          <div className="px-4 pb-4 pt-1">
+            <CaveatList
+              items={[
+                <>
+                  A country appears here when it files nothing with the World
+                  Bank&apos;s WITS and nothing with UN Comtrade for this year. The reasons
+                  differ - sanctions, conflict, a statistical agency without the capacity,
+                  or a deliberate policy change - and this page does not guess which
+                  applies to {country.name}.
+                </>,
+                <>
+                  What it is not is zero trade. Absent data and reported zero are different
+                  facts and are kept apart everywhere in this product.
+                </>,
+              ]}
+            />
           </div>
         </Card>
         <Card
           title="What these estimates miss"
           icon={<ArrowUpRight className="h-3 w-3" aria-hidden />}
         >
-          <div className="space-y-2 px-4 pb-4 pt-1 text-xs leading-relaxed text-ink-muted">
-            <p>
-              Trade between {country.name} and other non-reporting economies leaves no
-              record on either side and is simply absent from these totals. That biases
-              the figures DOWN, which is why they are best read as a floor.
-            </p>
-            <p>
-              Partner records also use the buyer&apos;s valuation, which normally includes
-              freight and insurance where the seller&apos;s would not, so an estimated
-              export total tends to sit above what the country would have reported itself.
-            </p>
+          <div className="px-4 pb-4 pt-1">
+            <CaveatList
+              items={[
+                <>
+                  Trade between {country.name} and other non-reporting economies leaves no
+                  record on either side and is simply absent from these totals. That biases
+                  the figures DOWN, which is why they are best read as a floor.
+                </>,
+                <>
+                  Partner records also use the buyer&apos;s valuation, which normally
+                  includes freight and insurance where the seller&apos;s would not, so an
+                  estimated export total tends to sit above what the country would have
+                  reported itself.
+                </>,
+              ]}
+            />
           </div>
         </Card>
       </div>

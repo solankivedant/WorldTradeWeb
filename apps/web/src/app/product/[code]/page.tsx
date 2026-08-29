@@ -8,7 +8,7 @@ import {
 } from "@/lib/data";
 import { sectorInfo, sectorName, SECTOR_CATALOG } from "@/lib/sectors";
 import { ArrowDownToLine, ArrowUpFromLine, Boxes, Package, Users } from "lucide-react";
-import { Card, ProvenanceBar, Stat } from "@/components/ui";
+import { Card, CaveatList, ProvenanceBar, Stat } from "@/components/ui";
 import { PageHeader } from "@/components/page-header";
 import { RelatedViews } from "@/components/related-views";
 import {
@@ -182,12 +182,21 @@ export default async function ProductPage({ params }: { params: Promise<{ code: 
 
       <div className="mt-3">
         <Card title="Reading this page" icon={<Package className="h-3 w-3" aria-hidden />}>
-          <div className="space-y-2 px-4 pb-4 pt-1 text-xs leading-relaxed text-ink-muted">
-            <p>
-              World totals here are the sum of what reporting countries declare. They are
-              not an authoritative world figure: roughly a quarter of economies do not
-              report at this level, and their trade is simply absent rather than estimated.
-            </p>
+          <div className="px-4 pb-4 pt-1">
+            <CaveatList
+              items={[
+                <>
+                  World totals here are the sum of what reporting countries chose to
+                  publish, not an authoritative independent world figure.
+                </>,
+                <>
+                  Roughly a quarter of economies do not report at this level, so their
+                  trade is simply absent from these totals rather than estimated.
+                </>,
+              ]}
+            />
+          </div>
+          <div className="space-y-2 px-4 pb-4 text-xs leading-relaxed text-ink-muted">
             <p>
               This is an HS <em>section group</em> covering many distinct products.
               &quot;{name}&quot; can span thousands of tariff lines with different prices,

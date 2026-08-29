@@ -3,6 +3,7 @@ import {
   ArrowDownToLine,
   Boxes,
   Gauge,
+  Info,
   Percent,
   Scale as ScaleIcon,
   TriangleAlert,
@@ -30,7 +31,7 @@ import {
   type NeedsSort,
   type SupplyPicture,
 } from "@/lib/needs";
-import { Empty, ProvenanceBar, Stat, Warn } from "@/components/ui";
+import { CaveatList, Empty, Fact, ProvenanceBar, Stat, Warn } from "@/components/ui";
 import { PageHeader } from "@/components/page-header";
 import { RelatedViews } from "@/components/related-views";
 import { NeedsControls } from "@/components/needs-controls";
@@ -368,31 +369,31 @@ export default async function NeedsPage({
             <Percent className="h-3 w-3" aria-hidden />
             How to read the gap
           </h2>
-          <div className="mt-3 space-y-2 text-xs leading-relaxed text-ink-muted">
-            <p>
-              <strong className="text-ink-secondary">The gap</strong> is imports minus
-              exports within one HS section group. It is null unless both sides are
-              reported - subtracting an absent figure from a present one would treat &quot;not
-              reported&quot; as zero.
-            </p>
-            <p>
-              <strong className="text-ink-secondary">Coverage</strong> is exports divided by
-              imports in the same group. It is the more useful of the two for comparing
-              countries, because the dollar gap simply ranks large economies and large
-              groups first.
-            </p>
-            <p>
-              <strong className="text-ink-secondary">Concentration</strong> is a
-              Herfindahl index over every reported supplier&apos;s share. A high number means
-              a handful of countries carry the gap, which is a different kind of exposure
-              from the gap being large.
-            </p>
-            <p>
-              The tariff beside each supplier is what {country.name} charges that partner
-              across all products, not this group specifically - no per-sector rate is
-              published at this tier
-              {tariff === null ? "" : `, and its average across all partners is ${pct(tariff)}`}.
-            </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <Fact
+              icon={<Info className="h-3 w-3" aria-hidden />}
+              label="The gap"
+              value="Imports minus exports"
+              hint="Within one HS section group. Null unless both sides are reported - an absent figure is never treated as zero."
+            />
+            <Fact
+              icon={<Info className="h-3 w-3" aria-hidden />}
+              label="Coverage"
+              value="Exports / imports"
+              hint="Same group. The more useful figure for comparing countries, since the dollar gap alone just ranks large economies and large groups first."
+            />
+            <Fact
+              icon={<Info className="h-3 w-3" aria-hidden />}
+              label="Concentration"
+              value="Herfindahl index"
+              hint="Over every reported supplier's share. A high number means a handful of countries carry the gap - a different kind of exposure than the gap being large."
+            />
+            <Fact
+              icon={<Info className="h-3 w-3" aria-hidden />}
+              label="Tariff shown per supplier"
+              value={tariff === null ? "Not published" : pct(tariff)}
+              hint={`What ${country.name} charges that partner across all products, not this group specifically - no per-sector rate is published at this tier.`}
+            />
           </div>
         </div>
 
@@ -401,40 +402,44 @@ export default async function NeedsPage({
             <TriangleAlert className="h-3 w-3" aria-hidden />
             What it cannot tell you
           </h2>
-          <div className="mt-3 space-y-2 text-xs leading-relaxed text-ink-muted">
-            <p>
-              <strong className="text-ink-secondary">Nothing about domestic production.</strong>{" "}
-              Customs data records border crossings. A country with vast domestic output and
-              modest imports shows a small gap; that is not evidence it needs less of the
-              thing.
-            </p>
-            <p>
-              <strong className="text-ink-secondary">
-                Almost nothing about individual products.
-              </strong>{" "}
-              The grain is the HS section group, sixteen of them. The one exception is
-              aircraft: HS chapter 88 is carried as a labelled subset inside Transport,
-              because it is revision-stable and could be sourced separately. Every other
-              chapter list on this page is nomenclature and carries no figures. Broader
-              per-product detail needs HS-6 lines, which is still a V2 data decision.
-            </p>
-            <p>
-              <strong className="text-ink-secondary">
-                Little about the years after {year}.
-              </strong>{" "}
-              The sector cube is published for {year} only, so no group on this page
-              carries a year-on-year change. Country totals for later years come from a
-              second source and are shown in their own strip above, never spliced onto the
-              series.
-            </p>
-            <p>
-              <strong className="text-ink-secondary">Nothing about why.</strong> Freight,
-              certification, quotas and licensing do not appear in any of these figures.{" "}
-              <Link href="/source" className="text-series-1 hover:underline">
-                No inventory of non-tariff measures is published
-              </Link>{" "}
-              at all.
-            </p>
+          <div className="mt-3">
+            <CaveatList
+              items={[
+                <>
+                  <strong className="text-ink-secondary">Nothing about domestic production.</strong>{" "}
+                  Customs data records border crossings. A country with vast domestic output and
+                  modest imports shows a small gap; that is not evidence it needs less of the
+                  thing.
+                </>,
+                <>
+                  <strong className="text-ink-secondary">
+                    Almost nothing about individual products.
+                  </strong>{" "}
+                  The grain is the HS section group, sixteen of them. The one exception is
+                  aircraft: HS chapter 88 is carried as a labelled subset inside Transport,
+                  because it is revision-stable and could be sourced separately. Every other
+                  chapter list on this page is nomenclature and carries no figures. Broader
+                  per-product detail needs HS-6 lines, which is still a V2 data decision.
+                </>,
+                <>
+                  <strong className="text-ink-secondary">
+                    Little about the years after {year}.
+                  </strong>{" "}
+                  The sector cube is published for {year} only, so no group on this page
+                  carries a year-on-year change. Country totals for later years come from a
+                  second source and are shown in their own strip above, never spliced onto the
+                  series.
+                </>,
+                <>
+                  <strong className="text-ink-secondary">Nothing about why.</strong> Freight,
+                  certification, quotas and licensing do not appear in any of these figures.{" "}
+                  <Link href="/source" className="text-series-1 hover:underline">
+                    No inventory of non-tariff measures is published
+                  </Link>{" "}
+                  at all.
+                </>,
+              ]}
+            />
           </div>
         </div>
       </div>

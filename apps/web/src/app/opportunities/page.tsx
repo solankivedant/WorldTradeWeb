@@ -19,7 +19,7 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
-import { Empty, ProvenanceBar, Warn } from "@/components/ui";
+import { CaveatList, EstimateTag, Empty, ProvenanceBar, Warn } from "@/components/ui";
 import { PageHeader } from "@/components/page-header";
 import { RelatedViews } from "@/components/related-views";
 import {
@@ -261,25 +261,26 @@ export default async function OpportunitiesPage({
               accounts for freight cost, lead time, certification, distribution, local
               competition, or non-tariff barriers.
             </Warn>
-            <p className="text-xs leading-relaxed text-ink-muted">
-              Sector granularity is the HS-section group, not the HS-6 product line. A
-              &quot;Chemicals&quot; opportunity covers thousands of distinct products with
-              very different market dynamics. Treat a high score as a prompt to
-              investigate a market, not as a conclusion about one.
-            </p>
-            <p className="text-xs leading-relaxed text-ink-muted">
-              Widening market coverage brings smaller economies into range. It does not
-              make them better prospects - a $30M market scores few size points however it
-              is filtered, and small markets are where freight and distribution costs bite
-              hardest.
-            </p>
-            <p className="text-xs leading-relaxed text-ink-muted">
-              Supply-gap estimates are approximations, marked{" "}
-              <span className="rounded border border-hairline px-1 py-px text-[9px] uppercase tracking-wide">
-                est
-              </span>{" "}
-              wherever they appear.
-            </p>
+            <CaveatList
+              items={[
+                <>
+                  Sector granularity is the HS-section group, not the HS-6 product line. A
+                  &quot;Chemicals&quot; opportunity covers thousands of distinct products
+                  with very different market dynamics - treat a high score as a prompt to
+                  investigate a market, not as a conclusion about one.
+                </>,
+                <>
+                  Widening market coverage brings smaller economies into range. It does
+                  not make them better prospects - a $30M market scores few size points
+                  however it is filtered, and small markets are where freight and
+                  distribution costs bite hardest.
+                </>,
+                <>
+                  Supply-gap estimates are approximations, marked <EstimateTag /> wherever
+                  they appear.
+                </>,
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -328,7 +329,7 @@ function Coverage({
 function Row({ term, children }: { term: string; children: React.ReactNode }) {
   return (
     <div>
-      <dt className="font-medium text-ink-secondary">{term}</dt>
+      <dt className="font-semibold text-ink-secondary">{term}</dt>
       <dd className="text-ink-muted">{children}</dd>
     </div>
   );

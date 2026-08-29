@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import {
   ArrowRight,
-  ChevronDown,
   Package,
   Percent,
   ShoppingCart,
@@ -18,6 +16,7 @@ import { useTheme } from "./theme";
 import { pct, usd } from "@/lib/format";
 import { CountryFlag } from "@/components/country-flag";
 import { ScoreSpine } from "@/components/charts/score-spine";
+import { Disclosure } from "@/components/disclosure";
 import { EstimateTag } from "./ui";
 import type { Opportunity } from "@/lib/types";
 
@@ -37,11 +36,16 @@ import type { Opportunity } from "@/lib/types";
  * evidence for it.
  */
 
-const BANDS = [
+export const BANDS = [
   { floor: 70, label: "Strong fit", tone: "text-series-1" },
   { floor: 50, label: "Worth a look", tone: "text-ink" },
   { floor: 0, label: "Early signal", tone: "text-ink-secondary" },
 ] as const;
+
+/** The ordinal band a score falls into - shared so a score reads the same color everywhere. */
+export function scoreBand(score: number) {
+  return BANDS.find((b) => score >= b.floor) ?? BANDS[BANDS.length - 1];
+}
 
 export function OpportunityCard({
   opportunity,
@@ -59,7 +63,6 @@ export function OpportunityCard({
   pinned?: boolean;
   onPin?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   const { resolved } = useTheme();
   const { evidence } = opportunity;
   const band = BANDS.find((b) => opportunity.score >= b.floor) ?? BANDS[2];
@@ -135,7 +138,7 @@ export function OpportunityCard({
             </button>
           )}
           <div className="text-right">
-            <div className="tabular text-2xl font-semibold leading-none">{opportunity.score}</div>
+            <div className="tabular text-3xl font-semibold leading-none">{opportunity.score}</div>
             <div className={`mt-1 text-2xs font-medium ${band.tone}`}>{band.label}</div>
           </div>
         </div>
@@ -178,46 +181,32 @@ export function OpportunityCard({
         />
       </dl>
 
-      <button
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="flex items-center justify-between px-4 py-2.5 text-2xs font-medium text-ink-secondary transition-colors hover:bg-raised hover:text-ink"
-      >
-        <span>{open ? "Hide" : "Show"} how this scored {opportunity.score}</span>
-        <ChevronDown
-          className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`}
-          aria-hidden
-        />
-      </button>
-
-      {open && (
-        <div className="border-t border-hairline bg-plane/50 px-4 py-3">
-          <ul className="space-y-2.5">
-            {opportunity.components.map((component) => (
-              <li key={component.label}>
-                <div className="flex items-baseline justify-between gap-2 text-xs">
-                  <span className="font-medium text-ink-secondary">{component.label}</span>
-                  <span className="tabular text-ink-muted">
-                    <span className="text-ink">{component.points}</span> / {component.max}
-                  </span>
-                </div>
-                {/* Points against the points that were available - magnitude, so one hue. */}
-                <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-series-1/15">
-                  <div
-                    className="h-full rounded-full bg-series-1"
-                    style={{ width: `${(component.points / component.max) * 100}%` }}
-                  />
-                </div>
-                <p className="mt-1 text-2xs leading-relaxed text-ink-muted">{component.reason}</p>
-              </li>
-            ))}
-          </ul>
-          <div className="mt-3 flex items-baseline justify-between border-t border-hairline pt-2 text-xs">
-            <span className="font-medium text-ink-secondary">Total</span>
-            <span className="tabular font-semibold text-ink">{opportunity.score} / 100</span>
-          </div>
+      <Disclosure prompt={`how this scored ${opportunity.score}`}>
+        <ul className="space-y-2.5">
+          {opportunity.components.map((component) => (
+            <li key={component.label}>
+              <div className="flex items-baseline justify-between gap-2 text-xs">
+                <span className="font-medium text-ink-secondary">{component.label}</span>
+                <span className="tabular text-ink-muted">
+                  <span className="text-ink">{component.points}</span> / {component.max}
+                </span>
+              </div>
+              {/* Points against the points that were available - magnitude, so one hue. */}
+              <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-series-1/15">
+                <div
+                  className="h-full rounded-full bg-series-1"
+                  style={{ width: `${(component.points / component.max) * 100}%` }}
+                />
+              </div>
+              <p className="mt-1 text-2xs leading-relaxed text-ink-muted">{component.reason}</p>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-3 flex items-baseline justify-between border-t border-hairline pt-2 text-xs">
+          <span className="font-medium text-ink-secondary">Total</span>
+          <span className="tabular font-semibold text-ink">{opportunity.score} / 100</span>
         </div>
-      )}
+      </Disclosure>
 
       {/* Each link names where it goes. "Corridor / Sector / Country" told the reader the
           shape of the destination page but not which corridor, which sector or which

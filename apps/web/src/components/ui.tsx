@@ -42,6 +42,7 @@ export function Stat({
   deltaLabel,
   hint,
   icon,
+  toneValue,
 }: {
   label: string;
   value: string;
@@ -49,16 +50,30 @@ export function Stat({
   deltaLabel?: string;
   hint?: string;
   icon?: React.ReactNode;
+  /**
+   * Colors the headline VALUE itself by sign, independent of `delta` (which colors a
+   * period-over-period badge). For a raw signed figure like a trade balance there is no
+   * "vs last period" percentage to show, but the sign is still the useful signal. Zero and
+   * null both render uncolored - per this repo's zero-vs-null rule, zero must never look
+   * like either a surplus or a deficit.
+   */
+  toneValue?: number | null;
 }) {
   const positive = delta !== null && delta !== undefined && delta > 0;
   const negative = delta !== null && delta !== undefined && delta < 0;
+  const valueTone =
+    toneValue === null || toneValue === undefined || toneValue === 0
+      ? ""
+      : toneValue > 0
+        ? " text-delta-up"
+        : " text-delta-down";
   return (
     <div className="card px-4 py-3">
       <div className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
         {icon}
         {label}
       </div>
-      <div className="mt-1.5 text-2xl font-semibold leading-none">{value}</div>
+      <div className={`mt-1.5 text-2xl font-semibold leading-none${valueTone}`}>{value}</div>
       <div className="mt-1.5 flex items-baseline gap-1.5 text-xs">
         {delta !== null && delta !== undefined ? (
           <span className={positive ? "text-delta-up" : negative ? "text-delta-down" : "text-ink-muted"}>
@@ -123,6 +138,64 @@ export function Warn({ children }: { children: React.ReactNode }) {
       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-warning" aria-hidden />
       <div className="leading-relaxed">{children}</div>
     </div>
+  );
+}
+
+/**
+ * A list of caveats - short, one-per-line qualifications a reader should not miss but
+ * should not have to read as a paragraph either. `items` takes nodes rather than plain
+ * strings because a caveat sometimes needs an inline link (e.g. "see methodology").
+ */
+export function CaveatList({ items, dense }: { items: React.ReactNode[]; dense?: boolean }) {
+  return (
+    <ul className={dense ? "space-y-1.5" : "space-y-2.5"}>
+      {items.map((item, i) => (
+        <li
+          key={i}
+          className={`flex gap-2 leading-relaxed text-ink-secondary ${dense ? "text-2xs" : "text-xs"}`}
+        >
+          <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-ink-muted" aria-hidden />
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Icon + label + value + hint tile. Several side by side, wrapped in `FactGrid`. */
+export function Fact({
+  icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  hint: string;
+}) {
+  return (
+    <div className="bg-surface px-4 py-3">
+      <div className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
+        {icon}
+        {label}
+      </div>
+      <div className="tabular mt-1.5 text-base font-semibold leading-tight">{value}</div>
+      <p className="mt-1 text-2xs leading-snug text-ink-muted">{hint}</p>
+    </div>
+  );
+}
+
+/** Convenience grid around several `Fact` tiles - saves hand-writing the grid classes. */
+export function FactGrid({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-4 ${className ?? ""}`}>{children}</div>
   );
 }
 

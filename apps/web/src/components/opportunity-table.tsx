@@ -7,6 +7,7 @@ import { ScoreSpine } from "@/components/charts/score-spine";
 import { SectorIcon } from "@/components/sector-icon";
 import { pct, usd } from "@/lib/format";
 import { opportunityId } from "@/hooks/use-shortlist";
+import { scoreBand } from "@/components/opportunity-card";
 import type { Opportunity } from "@/lib/types";
 import type { SortKey } from "./opportunity-board";
 
@@ -133,7 +134,9 @@ export function OpportunityTable({
                       <span className="truncate">{row.sectorName}</span>
                     </Link>
                   </td>
-                  <td className="px-3 py-2 text-right font-medium text-ink">{row.score}</td>
+                  <td className={`px-3 py-2 text-right font-medium ${scoreBand(row.score).tone}`}>
+                    {row.score}
+                  </td>
                   <td className="px-3 py-2">
                     <ScoreSpine components={row.components} score={row.score} height={7} />
                   </td>

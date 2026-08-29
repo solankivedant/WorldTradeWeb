@@ -38,6 +38,7 @@ import { TopSectors } from "@/components/top-sectors";
 import { MirrorCompare } from "@/components/charts/mirror-compare";
 import { GapTable } from "@/components/charts/gap-table";
 import { CountryFlag } from "@/components/country-flag";
+import { TariffRateCell } from "@/components/tariff-rate-cell";
 import { pct, share, usd } from "@/lib/format";
 
 export async function generateMetadata({
@@ -227,6 +228,7 @@ export default async function CorridorPage({
           label={`Balance for ${ca.iso3}`}
           value={usd(balance)}
           hint={balance === null ? "" : balance >= 0 ? "surplus" : "deficit"}
+          toneValue={balance}
         />
         <Stat
           icon={<Percent className="h-3 w-3" aria-hidden />}
@@ -268,20 +270,8 @@ export default async function CorridorPage({
       <div className="mt-3 grid items-start gap-3 lg:grid-cols-2">
         <Card title="Tariffs in this corridor" icon={<Percent className="h-3 w-3" aria-hidden />}>
           <div className="grid grid-cols-2 gap-px bg-hairline">
-            <TariffCell
-              from={cb.name}
-              to={ca.name}
-              fromIso={cb.iso3}
-              toIso={ca.iso3}
-              rate={tariffBonA}
-            />
-            <TariffCell
-              from={ca.name}
-              to={cb.name}
-              fromIso={ca.iso3}
-              toIso={cb.iso3}
-              rate={tariffAonB}
-            />
+            <TariffRateCell label={`${cb.iso3} charges ${ca.iso3}`} rate={tariffBonA} />
+            <TariffRateCell label={`${ca.iso3} charges ${cb.iso3}`} rate={tariffAonB} />
           </div>
           <p className="px-4 py-3 text-2xs leading-relaxed text-ink-muted">
             {rateYear === null
@@ -343,32 +333,6 @@ export default async function CorridorPage({
       <div className="card mt-3 overflow-hidden">
         <ProvenanceBar meta={meta} extra={`${ca.iso3}-${cb.iso3} · ${year}`} />
       </div>
-    </div>
-  );
-}
-
-function TariffCell({
-  from,
-  to,
-  fromIso,
-  toIso,
-  rate,
-}: {
-  from: string;
-  to: string;
-  fromIso: string;
-  toIso: string;
-  rate: number | null;
-}) {
-  return (
-    <div className="bg-surface px-4 py-3">
-      <div className="text-2xs uppercase tracking-wider text-ink-muted">
-        {fromIso} charges {toIso}
-      </div>
-      <div className="mt-1 text-2xl font-semibold">{rate === null ? "-" : pct(rate)}</div>
-      <p className="mt-0.5 text-2xs text-ink-muted">
-        {rate === null ? "Not published for this pair" : `${from} on goods from ${to}`}
-      </p>
     </div>
   );
 }

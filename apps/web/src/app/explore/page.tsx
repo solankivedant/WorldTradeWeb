@@ -16,7 +16,7 @@ import {
   sectorSummary,
   tariffApplied,
 } from "@/lib/data";
-import { ProvenanceBar, Stat } from "@/components/ui";
+import { CaveatList, ProvenanceBar, Stat } from "@/components/ui";
 import { PageHeader } from "@/components/page-header";
 import { RelatedViews } from "@/components/related-views";
 import {
@@ -268,22 +268,30 @@ export default async function ExplorePage({
                 <h2 className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
                   Why totals here differ from a country page
                 </h2>
-                <div className="mt-2 space-y-2 text-xs leading-relaxed text-ink-secondary">
-                  <p>
-                    WITS computes corridor totals and corridor-by-sector separately, and
-                    the two aggregations do not always agree. Nothing on this page is
-                    scaled to make them match - with no sector selected the list reads
-                    corridor totals, and with one selected it reads the sector cube.
-                  </p>
-                  <p>
-                    A country page reports what that country itself declares. Here a
-                    connection is attributed to whoever sold the goods, so the same trade
-                    can appear under a different number on the two screens. Both are real;{" "}
-                    <Link href="/source" className="text-series-1 hover:underline">
-                      the source page
-                    </Link>{" "}
-                    sets out which is which.
-                  </p>
+                <div className="mt-2">
+                  <CaveatList
+                    items={[
+                      <>
+                        WITS computes corridor totals and corridor-by-sector totals as
+                        separate aggregations, and the two do not always agree exactly.
+                      </>,
+                      <>
+                        Nothing on this page is scaled to make them match: with no sector
+                        selected the list reads corridor totals, and with one selected it
+                        reads the sector cube instead.
+                      </>,
+                      <>
+                        A country page reports what that country itself declares, while a
+                        connection here is attributed to whoever sold the goods, so the
+                        same trade can appear under a different number on the two screens.
+                        Both are real;{" "}
+                        <Link href="/source" className="text-series-1 hover:underline">
+                          the source page
+                        </Link>{" "}
+                        sets out which is which.
+                      </>,
+                    ]}
+                  />
                 </div>
               </div>
             </div>
@@ -294,13 +302,26 @@ export default async function ExplorePage({
                 <ArrowLeftRight className="h-4 w-4 text-ink-muted" aria-hidden />
                 Compare two connections
               </h2>
-              <p className="mt-1 max-w-3xl text-xs leading-relaxed text-ink-muted">
-                Both cards share one scale, so a bar is the same length for the same value
-                in either of them. Pick the two here, or hit &quot;Compare&quot; on any row
-                in the connections pane to send it straight into a slot. Sector splits come
-                from each seller&apos;s own report; where a country publishes nothing, its
-                side comes from the other country&apos;s customs record and is labelled.
-              </p>
+              <div className="mt-1 max-w-3xl">
+                <CaveatList
+                  items={[
+                    <>
+                      Both cards share one scale, so a bar is the same length for the same
+                      value in either of them.
+                    </>,
+                    <>
+                      Pick the two connections here, or hit &quot;Compare&quot; on any row
+                      in the connections pane to send it straight into a slot.
+                    </>,
+                    <>
+                      Sector splits come from each seller&apos;s own report; where a
+                      country publishes nothing, its side comes from the other
+                      country&apos;s customs record and is labelled - a provenance
+                      separate from the headline total above it.
+                    </>,
+                  ]}
+                />
+              </div>
 
               <div className="card mt-3 p-3">
                 <CorridorComparePicker countries={countries} />

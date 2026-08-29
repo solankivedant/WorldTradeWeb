@@ -2,7 +2,7 @@ import { Info } from "lucide-react";
 
 import { FlowPair, type FlowPairRow } from "@/components/charts/flow-pair";
 import { IndicatorMeter } from "@/components/charts/indicator-meter";
-import { Card } from "@/components/ui";
+import { Card, CaveatList } from "@/components/ui";
 import { familyIcon } from "@/lib/indicators";
 import type { IndicatorReading } from "@/lib/types";
 
@@ -54,12 +54,27 @@ export function CountryContext({
       </h2>
       <p className="mt-1 max-w-3xl text-xs leading-relaxed text-ink-secondary">
         Services sold across borders, money moved by investors and workers, and the
-        conditions goods actually travel under. None of this is customs data and none of
-        it can be added to the trade figures above - services and financial flows are
-        balance-of-payments statistics, the logistics and governance scores are surveys
-        and composites. Each figure carries the year it belongs to, because these series
-        do not all end where the trade data does.
+        conditions goods actually travel under - none of this is customs data, and none of
+        it can be added to the trade figures above.
       </p>
+      <div className="mt-2 max-w-3xl">
+        <CaveatList
+          dense
+          items={[
+            <>
+              Services and financial flows are balance-of-payments statistics; the
+              logistics and governance scores are surveys and composites - a different
+              measurement system from the customs-recorded goods trade above, so the two
+              are never summed.
+            </>,
+            <>
+              Each figure below carries the year it belongs to rather than the trade
+              year beside it, because these series do not all end where the trade data
+              does or where each other does.
+            </>,
+          ]}
+        />
+      </div>
       {reportedNote && (
         <p className="mt-2 max-w-3xl rounded-md border border-hairline bg-raised/40 px-3 py-2 text-xs leading-relaxed text-ink-secondary">
           {reportedNote}
@@ -99,18 +114,31 @@ export function CountryContext({
         ))}
       </div>
 
-      <p className="mt-2 flex items-start gap-1.5 text-2xs leading-relaxed text-ink-muted">
-        <Info className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
-        <span>
-          Survey scores and composite estimates are ordinal reads, not measurements: a
-          small gap between two countries is not a finding. No inventory of non-tariff
-          measures is published here - the WTO and UNCTAD datasets that hold one are not
-          publicly reachable, so customs efficiency stands in as a proxy for border
-          friction and counts nobody&apos;s certificates or quotas. Freight rates for a
-          particular route are commercial data; shipping connectivity describes a
-          country&apos;s place in the network, not the cost of shipping anything.
-        </span>
-      </p>
+      <div className="mt-2 flex items-start gap-1.5">
+        <Info className="mt-0.5 h-3 w-3 shrink-0 text-ink-muted" aria-hidden />
+        <div className="flex-1">
+          <CaveatList
+            dense
+            items={[
+              <>
+                Survey scores and composite estimates are ordinal reads, not
+                measurements: a small gap between two countries is not a finding.
+              </>,
+              <>
+                No inventory of non-tariff measures is published here - the WTO and
+                UNCTAD datasets that hold one are not publicly reachable, so the
+                customs-clearance score stands in as a labelled proxy for border friction
+                and counts nobody&apos;s certificates or quotas.
+              </>,
+              <>
+                Freight rates for a particular route are commercial data; shipping
+                connectivity describes a country&apos;s place in the network, not the
+                cost of shipping anything.
+              </>,
+            ]}
+          />
+        </div>
+      </div>
     </section>
   );
 }

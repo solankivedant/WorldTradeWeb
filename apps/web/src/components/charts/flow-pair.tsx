@@ -92,7 +92,15 @@ function NetFlows({ row }: { row: FlowPairRow }) {
             <Icon className="h-2.5 w-2.5 shrink-0" aria-hidden />
             <span className="truncate">{label}</span>
           </dt>
-          <dd className="tabular mt-0.5 text-sm font-semibold text-ink">
+          <dd
+            className={`tabular mt-0.5 text-sm font-semibold ${
+              !reading || reading.value === 0
+                ? "text-ink"
+                : reading.value > 0
+                  ? "text-delta-up"
+                  : "text-delta-down"
+            }`}
+          >
             {reading ? formatIndicator(reading.value, reading.spec.unit) : "not reported"}
             {reading && reading.value < 0 && (
               <span className="ml-1.5 text-2xs font-normal text-ink-muted">net withdrawal</span>

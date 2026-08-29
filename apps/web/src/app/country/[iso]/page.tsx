@@ -240,6 +240,7 @@ export default async function CountryPage({ params }: { params: Promise<{ iso: s
           label="Trade balance"
           value={usd(balance)}
           hint={balance === null ? "" : balance >= 0 ? "surplus" : "deficit"}
+          toneValue={balance}
         />
         <Stat
           icon={<Trophy className="h-3 w-3" aria-hidden />}

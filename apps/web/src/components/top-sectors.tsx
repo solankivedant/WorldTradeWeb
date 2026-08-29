@@ -7,6 +7,7 @@ import { useTheme } from "@/components/theme";
 import { sectorInfo } from "@/lib/sectors";
 import { SectorIcon } from "@/components/sector-icon";
 import { pct, usd } from "@/lib/format";
+import { CaveatList } from "@/components/ui";
 import type { LeadingSector } from "@/lib/pairing";
 
 /**
@@ -102,13 +103,19 @@ export function TopSectors({
           linkSectors={linkSectors}
         />
       </div>
-      <p className={`${panel ? "mt-2" : "mt-3"} text-2xs leading-relaxed text-ink-muted`}>
-        These are HS section groups, not single product lines - a group spans whole
-        chapters of the Harmonized System, and the contents shown are examples rather than
-        a full list. Shares are of the {exports?.ofGroups ?? imports?.ofGroups ?? 16} groups
-        in this direction, read from the sector cube - a different aggregation from the
-        headline figures above, and the two are never scaled to match.
-      </p>
+      <div className={panel ? "mt-2" : "mt-3"}>
+        <CaveatList
+          dense
+          items={[
+            "These are HS section groups, not single product lines - a group spans whole chapters of the Harmonized System, and the contents shown are examples rather than a full list.",
+            <>
+              Shares are of the {exports?.ofGroups ?? imports?.ofGroups ?? 16} groups in this
+              direction, read from the sector cube - a different aggregation from the headline
+              figures above, and the two are never scaled to match.
+            </>,
+          ]}
+        />
+      </div>
     </div>
   );
 }

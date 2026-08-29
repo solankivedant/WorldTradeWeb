@@ -19,7 +19,8 @@ import {
   Sigma,
   TriangleAlert,
 } from "lucide-react";
-import { EstimateTag, Warn } from "@/components/ui";
+import { CaveatList, Fact, EstimateTag, Warn } from "@/components/ui";
+import { Disclosure } from "@/components/disclosure";
 import { PageHeader } from "@/components/page-header";
 import { aviationMeta, frontierMeta, frontierYears } from "@/lib/data";
 import { ViewMap } from "@/components/view-map";
@@ -284,29 +285,41 @@ export default function DataPage() {
               Second source: {second.name}
             </h3>
             <p className="mt-1.5 text-xs leading-relaxed text-ink-muted">
-              Added for the two things the primary source does not carry.{" "}
-              <strong className="text-ink-secondary">Later years:</strong> WITS returns
-              HTTP 404 for {laterYears || "2024 onward"} for every reporter, so country
-              totals for those years come from here.{" "}
-              <strong className="text-ink-secondary">Chapter detail:</strong> the WITS
-              trade endpoint accepts only its sixteen section-group codes, so HS chapter 88
-              (aircraft) had to be fetched separately.
+              Added for the two things the primary source does not carry.
             </p>
-            <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-              Both land in their own published files and their own access functions, and
-              neither is merged into the WITS series. A figure from this source is never
-              drawn as a continuation of one from the other, because a change of source and
-              a change in trade look identical once they share a line.
-            </p>
-            <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-              <strong className="text-ink-secondary">Licence.</strong> UN Comtrade permits
-              re-dissemination of transformed data - their term for aggregations and derived
-              indicators - with no fee, and states that a data-visualisation system may
-              present actual figures. The restriction applies to redistributing original
-              records in bulk, by API streaming or file download. This site publishes
-              derived aggregates and offers neither, which is why the source is usable here
-              and why no bulk export of it exists on the site.
-            </p>
+            <div className="mt-2">
+              <CaveatList
+                items={[
+                  <>
+                    <strong className="text-ink-secondary">Later years:</strong> WITS
+                    returns HTTP 404 for {laterYears || "2024 onward"} for every reporter,
+                    so country totals for those years come from here instead.
+                  </>,
+                  <>
+                    <strong className="text-ink-secondary">Chapter detail:</strong> the
+                    WITS trade endpoint accepts only its sixteen section-group codes, so HS
+                    chapter 88 (aircraft) had to be fetched separately, from here.
+                  </>,
+                  <>
+                    <strong className="text-ink-secondary">Kept apart:</strong> both land
+                    in their own published files and their own access functions, and
+                    neither is merged into the WITS series - a figure from this source is
+                    never drawn as a continuation of one from the other, because a change
+                    of source and a change in trade look identical once they share a line.
+                  </>,
+                  <>
+                    <strong className="text-ink-secondary">Licence:</strong> UN Comtrade
+                    permits re-dissemination of transformed data - their term for
+                    aggregations and derived indicators - with no fee, and states that a
+                    data-visualisation system may present actual figures. The restriction
+                    applies to redistributing original records in bulk, by API streaming or
+                    file download; this site publishes derived aggregates and offers
+                    neither, which is why the source is usable here and why no bulk export
+                    of it exists on the site.
+                  </>,
+                ]}
+              />
+            </div>
             <p className="tabular mt-2 text-2xs text-ink-muted">
               vintage {second.vintage}
               {second.chapter ? ` · HS chapter ${second.chapter} within ${second.within}` : ""}
@@ -438,14 +451,30 @@ export default function DataPage() {
               hint="partner records inverted, never modelled"
             />
           </div>
-          <p className="mt-3 text-xs leading-relaxed text-ink-muted">
-            Two biases come with it, and both point the same way. Trade between two silent
-            economies leaves no record on either side and is missing entirely, which pushes
-            the totals DOWN. Partner records also use the buyer&apos;s valuation, which
-            normally carries freight and insurance where the seller&apos;s would not, which
-            pushes an estimated export figure UP against what the country would have
-            reported itself. Read them as a range, not a measurement.
-          </p>
+          <div className="mt-3">
+            <p className="text-xs leading-relaxed text-ink-muted">
+              Two biases come with it, and both point the same way:
+            </p>
+            <div className="mt-2">
+              <CaveatList
+                items={[
+                  <>
+                    Trade between two silent economies leaves no record on either side and
+                    is missing entirely, which pushes the totals DOWN.
+                  </>,
+                  <>
+                    Partner records also use the buyer&apos;s valuation, which normally
+                    carries freight and insurance where the seller&apos;s would not, which
+                    pushes an estimated export figure UP against what the country would
+                    have reported itself.
+                  </>,
+                ]}
+              />
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-ink-muted">
+              Read them as a range, not a measurement.
+            </p>
+          </div>
         </div>
       </Section>
 
@@ -459,20 +488,9 @@ export default function DataPage() {
             <h3 className="text-2xs font-semibold uppercase tracking-wider text-ink-muted">
               Known limitations
             </h3>
-            <ul className="mt-2.5 space-y-2">
-              {meta.caveats?.map((caveat) => (
-                <li
-                  key={caveat}
-                  className="flex gap-2 text-xs leading-relaxed text-ink-secondary"
-                >
-                  <span
-                    className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-ink-muted"
-                    aria-hidden
-                  />
-                  {caveat}
-                </li>
-              ))}
-            </ul>
+            <div className="mt-2.5">
+              <CaveatList items={meta.caveats ?? []} />
+            </div>
           </div>
 
           <div className="card p-4">
@@ -531,20 +549,29 @@ export default function DataPage() {
               full as Indian territory, including Gilgit-Baltistan
               (Pakistan-administered Kashmir) and Aksai Chin.
             </p>
-            <p className="mt-2 text-xs leading-relaxed text-ink-secondary">
-              Stated plainly, because a map cannot state it itself: both areas are claimed
-              by India and administered in practice by Pakistan and China respectively.
-              Natural Earth publishes point-of-view editions precisely because no single
-              rendering of these borders is accepted by every party, and every major
-              mapping provider varies the depiction by audience. Which edition a product
-              ships is an audience decision, not a factual claim about who administers the
-              ground.
-            </p>
-            <p className="mt-2 text-xs leading-relaxed text-ink-muted">
-              Boundaries affect only what is drawn. No trade figure on this site is
-              allocated by geography - every number is attributed to the reporting country
-              exactly as the source publishes it.
-            </p>
+            <div className="mt-2">
+              <Disclosure prompt="what this edition does and doesn't mean" variant="inline">
+                <CaveatList
+                  dense
+                  items={[
+                    <>
+                      Stated plainly, because a map cannot state it itself: both areas are
+                      claimed by India and administered in practice by Pakistan and China
+                      respectively. Natural Earth publishes point-of-view editions
+                      precisely because no single rendering of these borders is accepted by
+                      every party, and every major mapping provider varies the depiction by
+                      audience - which edition a product ships is an audience decision, not
+                      a factual claim about who administers the ground.
+                    </>,
+                    <>
+                      Boundaries affect only what is drawn. No trade figure on this site is
+                      allocated by geography - every number is attributed to the reporting
+                      country exactly as the source publishes it.
+                    </>,
+                  ]}
+                />
+              </Disclosure>
+            </div>
           </article>
 
           <article className="card p-4">
@@ -567,29 +594,6 @@ export default function DataPage() {
           </article>
         </div>
       </Section>
-    </div>
-  );
-}
-
-function Fact({
-  icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  hint: string;
-}) {
-  return (
-    <div className="bg-surface px-4 py-3">
-      <div className="flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-ink-muted">
-        {icon}
-        {label}
-      </div>
-      <div className="tabular mt-1.5 text-base font-semibold leading-tight">{value}</div>
-      <p className="mt-1 text-2xs leading-snug text-ink-muted">{hint}</p>
     </div>
   );
 }

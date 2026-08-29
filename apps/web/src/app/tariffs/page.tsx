@@ -13,7 +13,7 @@ import {
   TriangleAlert,
   Users,
 } from "lucide-react";
-import { ProvenanceBar, Warn } from "@/components/ui";
+import { CaveatList, ProvenanceBar, Warn } from "@/components/ui";
 import { PageHeader } from "@/components/page-header";
 import { RelatedViews } from "@/components/related-views";
 import {
@@ -284,18 +284,27 @@ export default async function TariffsPage({
               is actually traded. A country with a 3% average can still charge 40% on the
               specific product you ship.
             </Warn>
-            <p className="text-xs leading-relaxed text-ink-muted">
-              A preferential rate also usually requires meeting rules of origin, which
-              this figure does not capture. And tariffs are only one trade cost: quotas,
-              licensing, standards, and certification requirements do not appear here at
-              all. For a shipping decision, verify the specific HS line with the
-              destination&apos;s customs authority.
-            </p>
-            <p className="text-xs leading-relaxed text-ink-muted">
-              The band chart above counts partners, not trade. A schedule where most
-              partners are duty-free can still collect most of its duty from the handful
-              that are not.
-            </p>
+            <CaveatList
+              items={[
+                <>
+                  A preferential rate usually requires meeting rules of origin, which
+                  this figure does not capture.
+                </>,
+                <>
+                  Tariffs are only one trade cost: quotas, licensing, standards, and
+                  certification requirements do not appear here at all.
+                </>,
+                <>
+                  For a shipping decision, verify the specific HS line with the
+                  destination&apos;s customs authority before relying on this figure.
+                </>,
+                <>
+                  The band chart above counts partners, not trade volume - a schedule
+                  where most partners are duty-free can still collect most of its duty
+                  from the handful that are not.
+                </>,
+              ]}
+            />
           </div>
         </div>
       </div>
