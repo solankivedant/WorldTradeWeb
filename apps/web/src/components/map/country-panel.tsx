@@ -140,7 +140,10 @@ export function CountryPanel({
     detail.exports !== null && detail.imports !== null ? detail.exports - detail.imports : null;
   const exportGrowth = growth(detail.exports, detail.prevExports);
   const lens = detail.sectorFilter;
-  // One scale across every sector row and both sides, so bar length is comparable.
+  // `detail.sectors` is already narrowed to the lensed sector alone when a lens is active
+  // (see /api/map) - the API reads it from the unsliced sector map rather than the top-5
+  // mix, since a lensed sector is not always one of a country's five largest.
+  // One scale across every visible row and both sides, so bar length is comparable.
   const sectorMax = Math.max(
     ...detail.sectors.map((s) => Math.max(s.exports ?? 0, s.imports ?? 0)),
     1,
@@ -255,7 +258,7 @@ export function CountryPanel({
 
         {/* ---- sector mix, both directions on one centre line ---- */}
         {detail.sectors.length > 0 && (
-          <Section title={lens ? "Trade by sector · full mix" : "Trade by sector"}>
+          <Section title="Trade by sector">
             <CompareLegend
               className="mb-2"
               exportLabel={`${detail.name} sells`}
@@ -263,9 +266,9 @@ export function CountryPanel({
             />
             <ul className="space-y-2">
               {detail.sectors.map((s) => (
-                // The full mix stays visible under a lens - it is the context that makes
-                // the filtered figure mean something - but the chosen sector is marked so
-                // the two readings cannot be confused for each other.
+                // Under a lens this list holds only the chosen sector - every other figure
+                // in the panel already narrowed to it, so the mix list matches rather than
+                // showing fifteen unfiltered rows beside filtered headline numbers.
                 <li
                   key={s.code}
                   className={

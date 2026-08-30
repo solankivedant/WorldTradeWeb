@@ -262,17 +262,25 @@ export async function GET(request: NextRequest) {
           imports: row.value,
         });
     }
-    const sectors = [...sectorMap.values()]
-      .sort(
-        (a, b) =>
-          (b.exports ?? 0) + (b.imports ?? 0) - ((a.exports ?? 0) + (a.imports ?? 0)),
-      )
-      .slice(0, 5)
-      .map((row) => ({
-        ...row,
-        net:
-          row.exports !== null && row.imports !== null ? row.exports - row.imports : null,
-      }));
+    const withNet = (row: { code: string; name: string; exports: number | null; imports: number | null }) => ({
+      ...row,
+      net: row.exports !== null && row.imports !== null ? row.exports - row.imports : null,
+    });
+    // Under a lens the mix list has to narrow to that one sector too, same as every other
+    // figure in the panel - otherwise it shows the country's top five sectors regardless of
+    // the filter, which is a different (and wrong) set whenever the lensed sector is not
+    // itself one of the top five. The unsliced `sectorMap` (not the top-5 `sectors` list
+    // below) is what the lens is read from, since a filtered sector may not survive the cut.
+    const lensRow = sector ? sectorMap.get(sector) : undefined;
+    const sectors = lensRow
+      ? [withNet(lensRow)]
+      : [...sectorMap.values()]
+          .sort(
+            (a, b) =>
+              (b.exports ?? 0) + (b.imports ?? 0) - ((a.exports ?? 0) + (a.imports ?? 0)),
+          )
+          .slice(0, 5)
+          .map(withNet);
 
     // Under a sector lens the headline pair has to narrow with everything else. Leaving
     // it at the country total would put "$431B exports" above a list of fuel corridors
@@ -285,7 +293,7 @@ export async function GET(request: NextRequest) {
     // Computed from the unsliced rows, never from the truncated list.
     const leading = leadingSectors(sectorExports, sectorImports);
 
-    const lens = sector ? sectorMap.get(sector) : undefined;
+    const lens = lensRow;
     const filtered = Boolean(sector && hasSectorDetail());
 
     detail = {
